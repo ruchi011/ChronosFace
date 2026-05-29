@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+build/
+dist/
+backup/
+
+*.pyc
+*.pyo
+*.pyd
+
+visitor_report.xls
+current_employee.txt
+commands.txt
+visitor_report.csv
