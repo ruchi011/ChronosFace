@@ -249,13 +249,16 @@ def recognize_faces():
         "Embeddings Loaded Successfully!"
     )
     blink_counter = 0
-    challenge = random.choice([
+    challenge_sequence = [
+        "BLINK",
         "LEFT",
         "RIGHT",
         "SMILE"
-    ])
-    challenge_completed = False
-    current_challenge = 0
+    ]
+    random.shuffle(
+        challenge_sequence
+    )
+    current_challenge_index = 0
     challenge_completed = False
     challenge_start_time = time.time()
     last_blink_time = 0
@@ -283,20 +286,12 @@ def recognize_faces():
                     mesh_results.multi_face_landmarks
                 ):
                     h, w, _ = frame.shape
-                    if (
-                        not challenge_completed and
-                        time.time() -
-                        challenge_start_time < 5
-                    ):
-                        if detect_head_movement(
-                            face_landmarks.landmark,
-                            w,
-                            challenge
-                        ):
-                            challenge_completed = True
-                            print(
-                                "Head Challenge Passed"
-                            )
+                    current_challenge = (
+                        challenge_sequence[
+                            current_challenge_index
+                        ]
+                    )
+                    challenge_passed = False                           
                     eye_points = []
                     for index in LEFT_EYE:
                         landmark = (
@@ -309,6 +304,43 @@ def recognize_faces():
                         eye_points
                     )
                     print("EAR:", ear)
+                    if current_challenge == "BLINK":
+                        if blink_counter >= 2:
+                            challenge_passed = True
+                            blink_counter = 0
+                    elif current_challenge == "LEFT":
+                        if detect_head_movement(
+                            face_landmarks.landmark,
+                            w,
+                            "LEFT"
+                        ):
+                            challenge_passed = True
+                    elif current_challenge == "RIGHT":
+                        if detect_head_movement(
+                            face_landmarks.landmark,
+                            w,
+                            "RIGHT"
+                        ):
+                            challenge_passed = True
+                    elif current_challenge == "SMILE":
+                        if detect_smile(
+                            face_landmarks.landmark,
+                            h
+                        ):
+                            challenge_passed = True
+                        if challenge_passed:
+                            print(
+                                f"{current_challenge} Passed"
+                            )
+                            current_challenge_index += 1
+                            if (
+                                current_challenge_index
+                                >= len(challenge_sequence)
+                            ):
+                                challenge_completed = True
+                                print(
+                                    "All Challenges Completed"
+                                )
                     if challenge == "SMILE":
                         if detect_smile(
                             face_landmarks.landmark,
@@ -319,45 +351,31 @@ def recognize_faces():
                                 "Smile Challenge Passed"
                             )
                     if ear < 0.25:
-
                         current_blink_time = time.time()
-
                         if (
                             current_blink_time -
                             last_blink_time
                         ) > 1:
-
                             blink_counter += 1
                             liveness_reset_done = False
                             last_blink_time = (
                                 current_blink_time
                             )
-
                             print(
                                 f"Blink Count: {blink_counter}"
                             )
-
             detection_start = time.time()
-
             faces = app.get(frame)
-
             detection_end = time.time()
-
             detection_time = (
                 detection_end -
                 detection_start
             )
-
             for face in faces:
-
                 live_embedding = face.embedding
-
                 best_match = "Unknown"
-
                 best_similarity = -1
-
                 bbox = face.bbox.astype(int)
-
                 x1, y1, x2, y2 = bbox
                 current_face_area = (
                     (x2 - x1) *
@@ -574,23 +592,21 @@ def recognize_faces():
             fps = 1 / total_time
 
             if (
-                not challenge_completed and
-                time.time() -
-                challenge_start_time < 5
+                not challenge_completed
+                and
+                current_challenge_index
+                < len(challenge_sequence)
             ):
-
                 cv2.putText(
                     frame,
-                    f"DO: {challenge}",
-                    (20, 320),
+                    f"DO: {challenge_sequence[current_challenge_index]}",
+                    (20,320),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
-                    (0, 165, 255),
+                    (0,165,255),
                     3
                 )
-
             else:
-
                 cv2.putText(
                     frame,
                     "HEAD VERIFIED",
