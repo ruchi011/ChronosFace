@@ -749,14 +749,16 @@ Purpose:
 Stores generated employee payslips in PDF format.
 Generated File Example:1040_payslip.pdf
 Contents:
-Employee Details
-Salary Information
-Deductions
-Net Salary
-Payroll Summary
+Employee Details,
+Salary Information,
+Deductions,
+Net Salary,
+Payroll Summary.
+
 Usage:Generated through Payroll Module.
+
 Benefits:
-Automated Salary Documentation
+Automated Salary Documentation,
 Employee Salary Records
 
 # Future Enhancements
