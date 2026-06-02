@@ -72,11 +72,13 @@ Purpose:
 * Real-Time Video Streaming
 * Image Processing
 * Face Detection
+
 Features Implemented:
 * Employee Face Capture
 * Visitor Face Capture
 * Live Camera Feed
 * Face Region Extraction
+
 Workflow:
 1. Camera captures live video.
 2. Frames are processed continuously.
@@ -94,6 +96,7 @@ Purpose:
 * Face Detection
 * Face Embedding Extraction
 * Face Recognition
+
 Why InsightFace?
 Traditional face recognition compares images directly.
 InsightFace converts each face into a 512-dimensional numerical vector called an embedding.
@@ -103,6 +106,7 @@ Employee Face:
 Live Face:
 [0.124, 0.850, 0.537, ...]
 The system compares these vectors and calculates similarity.
+
 Advantages:
 * High Accuracy
 * Fast Recognition
@@ -308,8 +312,453 @@ Attendance Marked Automatically
 
 Step 8:
 Attendance Report Generated
+----
+# Application Workflow and Functionalities
+
+## ChronosFace AI Execution Flow
+
+### Method 1: Attendance Marking System
+
+The Face Recognition Attendance System can be started directly by executing:
+
+```bash
+python recognize.py
+```
+
+### Functionality
+
+The system activates the webcam and continuously captures live video frames.
+
+The following operations are performed:
+
+1. Face Detection using InsightFace.
+2. Liveness Detection using:
+
+   * Blink Detection
+   * Smile Detection
+   * Head Movement Verification
+3. Anti-Spoofing Verification:
+
+   * Screen Spoof Detection
+   * Replay Attack Detection
+4. Face Embedding Extraction.
+5. Cosine Similarity Matching with stored employee embeddings.
+6. Employee Identification.
+7. Automatic Attendance Marking.
+8. Attendance Record Storage in SQLite Database.
+9. Unknown Face Detection and Storage.
+10. Email Alert Generation for unauthorized persons.
+
+### Features
+
+* Real-Time Face Recognition
+* Automatic Attendance Marking
+* Blink Verification
+* Smile Verification
+* Head Movement Challenge
+* Anti-Spoofing Protection
+* Unknown Face Monitoring
+* Email Alerts
 
 ---
+
+## Method 2: Complete Application Workflow
+
+The complete application starts by running:
+
+```bash
+python login.py
+```
+
+### Login Window
+
+The Login Window serves as the main entry point of the application.
+
+The user is presented with three options:
+
+1. Admin Login
+2. HR Login
+3. Employee Login
+
+The user selects the appropriate role and enters credentials.
+
+---
+
+# Admin Module
+
+### Access
+
+Admin Login → Admin Dashboard
+
+### Functionalities
+
+The Admin Dashboard provides complete control over the system.
+
+#### Employee Management
+
+* Add Employees
+* Modify Employee Details
+* Delete Employees
+* Search Employees
+
+#### Face Recognition Management
+
+* Capture Employee Dataset
+* Generate Face Embeddings
+* Train Recognition System
+
+#### Attendance Management
+
+* View Attendance Records
+* Generate Attendance Reports
+* Monitor Employee Activity
+
+#### Visitor Management
+
+* Visitor Registration
+* Visitor Tracking
+* Visitor Reports
+* Visitor Whitelist
+* Visitor Blacklist
+
+#### Payroll Management
+
+* Salary Management
+* Payslip Generation
+* Payroll Reports
+
+#### Department Management
+
+* Create Departments
+* Manage Employee Groups
+
+### Admin Features
+
+* Complete System Control
+* Attendance Monitoring
+* Employee Monitoring
+* Visitor Monitoring
+* Payroll Processing
+* Report Generation
+
+---
+
+# HR Module
+
+### Access
+
+HR Login → HR Dashboard
+
+### Functionalities
+
+The HR Dashboard focuses on employee administration and attendance monitoring.
+
+#### Employee Operations
+
+* View Employee Information
+* Search Employee Records
+* Update Employee Information
+
+#### Attendance Operations
+
+* View Attendance Reports
+* Monitor Attendance Status
+* Export Attendance Data
+
+#### Payroll Operations
+
+* Generate Payslips
+* Process Salary Information
+
+### HR Features
+
+* Employee Monitoring
+* Attendance Monitoring
+* Payroll Support
+* Report Generation
+
+---
+
+# Employee Module
+
+### Access
+
+Employee Login → Employee Dashboard
+
+### Functionalities
+
+Employees can access their personal information and attendance records.
+
+#### Profile Management
+
+* View Profile Information
+* View Employee Details
+
+#### Attendance Management
+
+* View Attendance History
+* Check Attendance Status
+* Monitor Working Hours
+
+#### Account Management
+
+* Change Password
+* Update Personal Information
+
+### Employee Features
+
+* Self-Service Dashboard
+* Attendance Tracking
+* Profile Management
+* Password Management
+
+---
+
+# Face Recognition Workflow
+
+Step 1:
+Employee Face Images are captured using:
+
+```bash
+python capture_dataset.py
+```
+
+Step 2:
+Face Embeddings are generated using:
+
+```bash
+python generate_embeddings.py
+```
+
+Step 3:
+Embeddings are stored inside:
+
+```text
+embeddings/face_embeddings.pkl
+```
+
+Step 4:
+Live Face Recognition starts through:
+
+```bash
+python recognize.py
+```
+
+Step 5:
+Liveness Detection is performed.
+
+Step 6:
+Face Matching is performed using Cosine Similarity.
+
+Step 7:
+Attendance is marked automatically.
+
+Step 8:
+Attendance records are stored in SQLite Database.
+# Database Storage
+The application stores information in SQLite database:
+
+```text
+database/chronosface.db
+```
+
+Stored Data:
+* Employee Information
+* Attendance Records
+* Visitor Records
+* Department Information
+* Login Credentials
+* Payroll Information
+
+---
+
+# Key Features of ChronosFace AI
+* Face Recognition Attendance
+* Employee Management
+* HR Management
+* Visitor Management
+* Payroll Management
+* Attendance Reports
+* Face Dataset Capture
+* Face Embedding Generation
+* Liveness Detection
+* Anti-Spoofing Protection
+* Unknown Face Detection
+* Email Alert System
+* Role-Based Access Control
+* Modern CustomTkinter GUI
+Data Storage, Reports and Generated Files
+Attendance Records
+attendance/attendance.csv
+
+Purpose:
+The attendance.csv file stores all employee attendance records generated by the Face Recognition Attendance System.
+
+Information Stored:
+Employee ID
+Employee Name
+Date
+Login Time
+Logout Time
+Attendance Status
+Working Hours
+
+Usage:
+Whenever an employee is successfully recognized and passes liveness verification, the attendance information is automatically recorded in attendance.csv.
+
+Benefits:
+Attendance tracking
+Attendance history management
+Report generation
+Employee activity monitoring
+Attendance Reports
+attendance/reports/
+
+Purpose:
+This folder stores automatically generated attendance reports.
+
+Generated Files:
+Example:
+attendance_report_20260521_200830.csv
+attendance_report_20260522_130201.csv
+
+Contents:
+Employee Attendance Summary
+Daily Attendance Statistics
+Login/Logout Information
+Working Hours Information
+
+Usage:
+Administrators and HR personnel can generate reports for attendance analysis and record keeping.
+
+Employee Database
+database/chronosface.db
+
+Purpose:
+Main SQLite database used by the application.
+
+Stored Information:
+Employee Table
+Employee ID
+Employee Name
+Department
+Email
+Password
+Attendance Table
+Attendance Details
+Login Time
+Logout Time
+Attendance Status
+Visitor Table
+Visitor Information
+Visitor Entry Details
+Department Table
+Department Names
+Employee Group Information
+
+Benefits:
+Centralized Data Storage
+Fast Data Retrieval
+Secure Record Management
+Employee Face Dataset
+dataset/
+
+Purpose:Stores employee face images captured during registration.
+
+Example:
+
+dataset/
+└── Employee_Name/
+├── image1.jpg
+├── image2.jpg
+├── image3.jpg
+
+Usage:These images are used for generating face embeddings during training.
+
+Workflow:
+Employee Registration
+Face Capture
+Dataset Storage
+Embedding Generation
+
+Face Embeddings
+embeddings/face_embeddings.pkl
+
+Purpose:
+
+Stores generated face embeddings.
+
+What is Stored?
+
+Numerical face vectors generated by InsightFace.
+
+Example:
+Employee Face
+512-Dimensional Embedding Vector
+Stored in face_embeddings.pkl
+
+Usage:
+Used during recognition for matching live faces with registered employees.
+
+Benefits:
+Faster Recognition
+Better Accuracy
+Reduced Processing Time
+Unknown Face Records
+unknown_faces/
+
+Purpose:
+Stores images of unknown or unauthorized persons detected by the system.
+
+Example:
+unknown_20260601_103322.jpg
+
+Usage:
+When a face is detected but not recognized:
+
+Image is captured.
+Stored in unknown_faces folder.
+Email alert can be generated.
+Admin can review suspicious activity.
+
+Benefits:
+Security Monitoring
+Unauthorized Access Detection
+Audit Trail Creation
+Visitor Face Records
+visitor_faces/
+
+Purpose:
+Stores visitor face images.
+
+Information:
+Visitor Photos
+Visitor Registration Images
+
+Usage:
+Used for visitor identification and visitor management.
+
+Benefits:
+Visitor Tracking
+Visitor Verification
+Entry Monitoring
+Payslip Records
+payslips/
+
+Purpose:
+Stores generated employee payslips in PDF format.
+Generated File Example:1040_payslip.pdf
+Contents:
+Employee Details
+Salary Information
+Deductions
+Net Salary
+Payroll Summary
+Usage:Generated through Payroll Module.
+Benefits:
+Automated Salary Documentation
+Employee Salary Records
+
 # Future Enhancements
 * Cloud Database Integration
 * Mobile Application
