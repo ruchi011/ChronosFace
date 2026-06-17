@@ -684,20 +684,21 @@ Main SQLite database used by the application.
 - Employee Name
 - Department
 - Email
-- Password
-**Attendance Table**
+- Password.
 
--Attendance Details
--Login Time
--Logout Time
--Attendance Status
+Attendance Table:
+-Attendance Details,
+-Login Time,
+-Logout Time,
+-Attendance Status.
 
-**Visitor Table**
+Visitor Table:
 
--Visitor Information
--Visitor Entry Details
-**Department Table**
--Department Names
+-Visitor Information,
+-Visitor Entry Details.
+
+Department Table
+-Department Names,
 -Employee Group Information
 
 Benefits:
