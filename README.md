@@ -700,11 +700,10 @@ Main SQLite database used by the application.
 -Department Names
 -Employee Group Information
 
-**Benefits**
-
--Centralized Data Storage
--Fast Data Retrieval
--Secure Record Management
+Benefits:
+Centralized Data Storage,
+Fast Data Retrieval,
+Secure Record Management.
 ---
 ## Employee Face Dataset
 
@@ -718,9 +717,7 @@ dataset/
 
 **Purpose**
 Stores captured employee face images.
-
-**Workflow:**
-
+Workflow:
 Employee Registration
 Face Capture
 Dataset Storage
@@ -744,9 +741,10 @@ Usage:
 Used during recognition for matching live faces with registered employees.
 
 Benefits:
-Faster Recognition
-Better Accuracy
-Reduced Processing Time
+Faster Recognition,
+Better Accuracy,
+Reduced Processing Time.
+
 ---
 ## Unknown Face Records
 
@@ -769,9 +767,10 @@ Email alert can be generated.
 Admin can review suspicious activity.
 
 Benefits:
-Security Monitoring
-Unauthorized Access Detection
-Audit Trail Creation
+Security Monitoring,
+Unauthorized Access Detection,
+Audit Trail Creation.
+
 ---
 ## Visitor Face Records
 
@@ -788,10 +787,10 @@ Visitor Registration Images
 Usage:
 Used for visitor identification and visitor management.
 
-**Benefits**
-Visitor Tracking
-Visitor Verification
-Entry Monitoring
+Benefits:
+Visitor Tracking,
+Visitor Verification,
+Entry Monitoring.
 ---
 ## Payslip Records
 
@@ -812,9 +811,9 @@ Payroll Summary.
 
 Usage:Generated through Payroll Module.
 
-**Benefits**
+Benefits:
 Automated Salary Documentation,
-Employee Salary Records
+Employee Salary Records.
 ---
 # Future Enhancements
 * Cloud Database Integration
