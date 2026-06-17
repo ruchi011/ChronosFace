@@ -741,7 +741,8 @@ Stored in face_embeddings.pkl
 Usage:
 Used during recognition for matching live faces with registered employees.
 
-Benefits:
+**Benefits:**
+
 Faster Recognition
 Better Accuracy
 Reduced Processing Time
@@ -766,7 +767,8 @@ Stored in unknown_faces folder.
 Email alert can be generated.
 Admin can review suspicious activity.
 
-Benefits:
+**Benefits:**
+
 Security Monitoring
 Unauthorized Access Detection
 Audit Trail Creation
@@ -786,7 +788,8 @@ Visitor Registration Images
 Usage:
 Used for visitor identification and visitor management.
 
-Benefits:
+**Benefits:**
+
 Visitor Tracking
 Visitor Verification
 Entry Monitoring
@@ -810,7 +813,8 @@ Payroll Summary.
 
 Usage:Generated through Payroll Module.
 
-Benefits:
+**Benefits:**
+
 Automated Salary Documentation,
 Employee Salary Records
 ---
