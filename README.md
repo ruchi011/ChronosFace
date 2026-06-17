@@ -5,7 +5,7 @@ ChronosFace AI is an intelligent face recognition-based attendance and workforce
 The system automates attendance tracking by recognizing employees through facial biometrics instead of traditional methods such as manual registers, RFID cards, or fingerprint scanners.
 ChronosFace AI not only marks attendance automatically but also provides advanced security through liveness detection, anti-spoofing mechanisms, visitor management, payroll management, employee management, attendance analytics, and email-based alert systems.
 The project is designed to improve organizational productivity, reduce attendance fraud, and provide a secure and centralized workforce management solution.
----
+
 # Problem Statement
 Traditional attendance systems suffer from multiple problems:
 * Proxy attendance
@@ -15,7 +15,7 @@ Traditional attendance systems suffer from multiple problems:
 * Poor employee tracking
 * No real-time monitoring
 ChronosFace AI solves these issues by using AI-powered facial recognition and liveness verification techniques.
----
+
 # Objectives
 The major objectives of ChronosFace AI are:
 * Automate attendance marking.
@@ -64,19 +64,36 @@ Provides a professional appearance compared to traditional Tkinter.
 Flask is used to implement a lightweight REST API layer that enables communication between client dashboards and the centralized attendance server.
 ---
 # System Architecture
----text
-Admin Dashboard
-HR Dashboard
-Employee Dashboard
-        │
-        ▼
-   Flask REST API
-        │
-        ▼
-   SQLite Database
-        │
-        ▼
- Reports | Logs | Payroll
+
+```text
++-------------------+
+| Admin Dashboard   |
++-------------------+
+          |
++-------------------+
+| HR Dashboard      |
++-------------------+
+          |
++-------------------+
+| Employee Dashboard|
++-------------------+
+          |
+          v
++-------------------+
+| Flask REST API    |
++-------------------+
+          |
+          v
++-------------------+
+| SQLite Database   |
++-------------------+
+          |
+          v
++-------------------+
+| Reports | Logs    |
+| Payroll | Alerts  |
++-------------------+
+```
 
 # APIs and Libraries Used
 ChronosFace follows a Client-Server Architecture using Flask REST APIs. The GUI dashboards communicate with the Flask server through HTTP requests, and all data is stored and retrieved from SQLite.
@@ -145,25 +162,45 @@ Purpose:
 * Head Movement Verification
 Features:
 ### Blink Detection
+
 The system calculates Eye Aspect Ratio (EAR).
-When eyes close:
-EAR decreases.
-When eyes open:
-EAR increases.
+
+- Eyes Closed → EAR decreases
+- Eyes Open → EAR increases
+
 The system verifies real human presence.
 ---
 ### Smile Detection
-The system measures mouth opening.
-If the smile threshold is reached:
-User passes the smile challenge.
+
+The system measures mouth opening and facial expressions.
+
+- Smile detected → Verification passed
+- No smile detected → Verification failed
+
+Purpose:
+To ensure that the detected face belongs to a real person and not a static image.
 ---
 
 ### Head Movement Verification
-Random challenge:
-* Turn Left
-* Turn Right
-User must perform the movement.
-This prevents photo-based spoofing.
+
+The system generates a random movement challenge.
+
+Possible challenges:
+
+- Turn Left
+- Turn Right
+- Look Up
+- Look Down
+
+Verification Process:
+
+1. Challenge is displayed.
+2. User performs the requested movement.
+3. System validates the movement.
+4. Verification is completed.
+
+Purpose:
+Prevents spoofing attacks using printed photographs.
 ---
 ## 4. NumPy API
 Library:
@@ -224,16 +261,19 @@ Features:
 Generated Output:
 Employee_Payslip.pdf
 ---
-# REST APIs:
-Employee Registration:-POST /api/biometric/register
-Employee Verification:-POST /api/biometric/verify
-Clock In:-POST /api/attendance/clockin
-Clock Out:-POST /api/attendance/clockout
-Start Break:-POST /api/attendance/startbreak
-End Break:-POST /api/attendance/endbreak
-Apply Leave:-POST /api/leave/apply
-View Logs:-GET /api/logs
-View Employees:-GET /api/employees
+# REST APIs
+
+| Function | Endpoint |
+|-----------|-----------|
+| Employee Registration | POST /api/biometric/register |
+| Employee Verification | POST /api/biometric/verify |
+| Clock In | POST /api/attendance/clockin |
+| Clock Out | POST /api/attendance/clockout |
+| Start Break | POST /api/attendance/startbreak |
+| End Break | POST /api/attendance/endbreak |
+| Apply Leave | POST /api/leave/apply |
+| View Logs | GET /api/logs |
+| View Employees | GET /api/employees |
 # Machine Learning Concepts Used
 ## Face Embeddings
 Instead of storing raw images, the system stores embeddings.
@@ -246,7 +286,7 @@ face_embeddings.pkl
 Advantages:
 * Faster Recognition
 * Lower Storage Requirements
-* Better Accuracy
+* Better Accuracy.
 ---
 ## Cosine Similarity
 Used to compare embeddings.
@@ -261,25 +301,49 @@ Recognition accepted.
 Prevents:
 * Photo Attacks
 * Mobile Screen Attacks
-* Printed Image Attacks
+* Printed Image Attacks.
 Techniques:
 * Blink Verification
 * Smile Verification
 * Head Movement Verification
 ---
 ## Screen Spoof Detection
-Uses FFT (Fast Fourier Transform).
+
+The system uses FFT (Fast Fourier Transform) analysis to identify digital screen artifacts.
+
 Detects:
-* Phone Screens
-* Laptop Screens
-* Printed Photos
+
+- Mobile Screens
+- Laptop Screens
+- Tablet Displays
+- Printed Images
+
+If spoofing is detected:
+
+- Authentication is denied.
+- Attendance is not recorded.
+
+Purpose:
+Prevents unauthorized access using images displayed on electronic devices.
 ---
 ## Replay Attack Detection
-Monitors:
-Face Area Stability
-If the face remains unnaturally static:
-Replay Attack Detected
-Access Blocked
+
+The system continuously monitors facial motion patterns.
+
+Detection Logic:
+
+- Natural face movements are expected.
+- Unnaturally static faces are flagged.
+- Replayed videos or screen recordings are detected.
+
+If a replay attack is detected:
+
+- Access is blocked.
+- Attendance is not marked.
+- Security alert can be generated.
+
+Purpose:
+Protects the system against video replay attacks and recorded face presentations.
 ---
 # Project Modules
 ## Admin Module
@@ -293,19 +357,21 @@ Functions:
 * Reports
 ---
 ## HR Module
+
 Functions:
+
 * Employee Monitoring
 * Attendance Monitoring
 * Leave Management
 * Payroll Management
----
-#### Leave Management
+
+### Leave Management
+
 * Apply Leave
 * Approve Leave
 * Reject Leave
 * Leave Status Tracking
 * Email Notification System
----
 ## Employee Module
 Functions:
 * Login
@@ -333,41 +399,18 @@ Functions:
 * PDF Payslip Generation
 ---
 # Attendance Workflow
-Step 1:
-Employee Registration
-
-Step 2:
-Face Dataset Capture
-
-Step 3:
-Embedding Generation
-
-Step 4:
-Live Camera Recognition
-
-Step 5:
-Liveness Verification
-
-Step 6:
-Cosine Similarity Matching
-
-Step 7:
-Attendance Marked Automatically
-
-Step 8:
-Break Tracking
-
-Step 9:
-Clock Out Processing
-
-Step 10:
-Working Hours Calculation
-
-Step 11:
-Attendance Log Generation
-
-Step 12:
-Attendance Report Generation
+1. Employee Registration
+2. Face Dataset Capture
+3. Embedding Generation
+4. Live Camera Recognition
+5. Liveness Verification
+6. Cosine Similarity Matching
+7. Attendance Marked Automatically
+8. Break Tracking
+9. Clock Out Processing
+10. Working Hours Calculation
+11. Attendance Log Generation
+12. Attendance Report Generation
 ----
 # Application Workflow and Functionalities
 
@@ -574,13 +617,18 @@ Stored Data:
 * Flask REST API Integration
 * SQLite Database Integration
 
+
 # Data Storage, Reports and Generated Files
 
 ## Attendance Records
 
 ```text
-attendance/attendance.csv:
-The attendance.csv file stores all employee attendance records generated by the Face Recognition Attendance System.
+attendance/attendance.csv
+```
+
+**Purpose**
+
+Stores employee attendance records.
 
 Information Stored:
 Employee ID
@@ -594,15 +642,17 @@ Working Hours
 Usage:
 Whenever an employee is successfully recognized and passes liveness verification, the attendance information is automatically recorded in attendance.csv.
 
-Benefits:
-Attendance tracking
-Attendance history management
-Report generation
-Employee activity monitoring
-Attendance Reports
+**Benefits**
+
+- Attendance Tracking
+- Attendance History Management
+- Report Generation
+- Employee Activity Monitoring
+
+## Attendance Reports: 
 attendance/reports/
 
-Purpose:
+**Purpose**
 This folder stores automatically generated attendance reports.
 
 Generated Files:
@@ -618,67 +668,70 @@ Working Hours Information
 
 Usage:
 Administrators and HR personnel can generate reports for attendance analysis and record keeping.
+---
+## Employee Database
 
-Employee Database
+```text
 database/chronosface.db
+```
 
-Purpose:
+**Purpose**
 Main SQLite database used by the application.
 
-Stored Information:
-Employee Table
-Employee ID
-Employee Name
-Department
-Email
-Password
-Attendance Table
-Attendance Details
-Login Time
-Logout Time
-Attendance Status
-Visitor Table
-Visitor Information
-Visitor Entry Details
-Department Table
-Department Names
-Employee Group Information
+**Stored Information**
 
-Benefits:
-Centralized Data Storage
-Fast Data Retrieval
-Secure Record Management
-Employee Face Dataset
-dataset/
+- Employee ID
+- Employee Name
+- Department
+- Email
+- Password
+**Attendance Table**
 
-Purpose:Stores employee face images captured during registration.
+-Attendance Details
+-Login Time
+-Logout Time
+-Attendance Status
 
-Example:
+**Visitor Table**
 
+-Visitor Information
+-Visitor Entry Details
+**Department Table**
+-Department Names
+-Employee Group Information
+
+**Benefits:**
+-Centralized Data Storage
+-Fast Data Retrieval
+-Secure Record Management
+---
+## Employee Face Dataset
+
+```text
 dataset/
 └── Employee_Name/
     ├── image1.jpg
     ├── image2.jpg
     └── image3.jpg
+```
 
-Usage:These images are used for generating face embeddings during training.
+**Purpose**
+Stores captured employee face images.
 
 Workflow:
 Employee Registration
 Face Capture
 Dataset Storage
 Embedding Generation
+---
+## Face Embeddings
 
-Face Embeddings
+```text
 embeddings/face_embeddings.pkl
+```
 
-Purpose:
-
+**Purpose**
 Stores generated face embeddings.
-
-What is Stored?
-
-Numerical face vectors generated by InsightFace.
 
 Example:
 Employee Face
@@ -692,11 +745,15 @@ Benefits:
 Faster Recognition
 Better Accuracy
 Reduced Processing Time
-Unknown Face Records
-unknown_faces/
+---
+## Unknown Face Records
 
-Purpose:
-Stores images of unknown or unauthorized persons detected by the system.
+```text
+unknown_faces/
+```
+
+**Purpose**
+Stores images of unrecognized persons.
 
 Example:
 unknown_20260601_103322.jpg
@@ -713,11 +770,14 @@ Benefits:
 Security Monitoring
 Unauthorized Access Detection
 Audit Trail Creation
-Visitor Face Records
-visitor_faces/
+---
+## Visitor Face Records
 
-Purpose:
-Stores visitor face images.
+```text
+visitor_faces/
+```
+**Purpose**
+Stores visitor photographs.
 
 Information:
 Visitor Photos
@@ -730,11 +790,16 @@ Benefits:
 Visitor Tracking
 Visitor Verification
 Entry Monitoring
-Payslip Records
-payslips/
+---
+## Payslip Records
 
-Purpose:
-Stores generated employee payslips in PDF format.
+```text
+payslips/
+```
+
+**Purpose**
+Stores generated PDF payslips.
+
 Generated File Example:1040_payslip.pdf
 Contents:
 Employee Details,
@@ -748,8 +813,7 @@ Usage:Generated through Payroll Module.
 Benefits:
 Automated Salary Documentation,
 Employee Salary Records
-
-
+---
 # Future Enhancements
 * Cloud Database Integration
 * Mobile Application
@@ -758,6 +822,7 @@ Employee Salary Records
 * AI Attendance Analytics
 * Face Mask Recognition
 * GPS Integration
+
 ---
 
 # Developer
@@ -771,6 +836,7 @@ Madichetty Sai Ruchitha
 - Face Recognition
 - Attendance Management
 - Workforce Management System
+
 ## Repository
 
-https://github.com/ruchi011/ChronosFace
+[ChronosFace Repository](https://github.com/ruchi011/ChronosFace)
