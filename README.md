@@ -56,9 +56,35 @@ Used for:
 * Attendance Screens
 * Visitor Management
 Provides a professional appearance compared to traditional Tkinter.
+
+Backend Framework
+Flask
+
+Flask is used to implement a lightweight REST API layer that enables communication between client dashboards and the centralized attendance server.
 ---
+# System Architecture
++-----------------------+
+|  Admin Dashboard      |
+|  HR Dashboard         |
+|  Employee Dashboard   |
++-----------+-----------+
+            |
+            ▼
++-----------------------+
+|     Flask REST API    |
++-----------+-----------+
+            |
+            ▼
++-----------------------+
+|    SQLite Database    |
++-----------+-----------+
+            |
+            ▼
++-----------------------+
+| Reports | Logs | PDF |
++-----------------------+
 # APIs and Libraries Used
-Although ChronosFace is a desktop application and does not use REST APIs such as GET, POST, PUT, DELETE, it utilizes several powerful APIs and libraries.
+ChronosFace follows a Client-Server Architecture using Flask REST APIs. The GUI dashboards communicate with the Flask server through HTTP requests, and all data is stored and retrieved from SQLite.
 ---
 
 ## 1. OpenCV API
@@ -203,6 +229,16 @@ Features:
 Generated Output:
 Employee_Payslip.pdf
 ---
+# REST APIs:
+Employee Registration:-POST /api/biometric/register
+Employee Verification:-POST /api/biometric/verify
+Clock In:-POST /api/attendance/clockin
+Clock Out:-POST /api/attendance/clockout
+Start Break:-POST /api/attendance/startbreak
+End Break:-POST /api/attendance/endbreak
+Apply Leave:-POST /api/leave/apply
+View Logs:-GET /api/logs
+View Employees:-GET /api/employees
 # Machine Learning Concepts Used
 ## Face Embeddings
 Instead of storing raw images, the system stores embeddings.
@@ -268,10 +304,23 @@ Functions:
 * Leave Management
 * Payroll Management
 ---
+#### Leave Management
+* Apply Leave
+* Approve Leave
+* Reject Leave
+* Leave Status Tracking
+* Email Notification System
+---
 ## Employee Module
 Functions:
 * Login
 * View Attendance
+* Clock In
+* Start Break
+* End Break
+* Clock Out
+* Apply Leave
+* View Leave Status
 * View Profile
 * Change Password
 ---
@@ -311,7 +360,19 @@ Step 7:
 Attendance Marked Automatically
 
 Step 8:
-Attendance Report Generated
+Break Tracking
+
+Step 9:
+Clock Out Processing
+
+Step 10:
+Working Hours Calculation
+
+Step 11:
+Attendance Log Generation
+
+Step 12:
+Attendance Report Generation
 ----
 # Application Workflow and Functionalities
 
@@ -494,18 +555,30 @@ Stored Data:
 # Key Features of ChronosFace AI
 * Face Recognition Attendance
 * Employee Management
-* HR Management
+* Attendance Management
+* Break Tracking System
+* Leave Management
+* Leave Approval/Rejection Workflow
 * Visitor Management
+* Visitor Check-In / Check-Out
+* Whitelist / Blacklist Management
 * Payroll Management
-* Attendance Reports
-* Face Dataset Capture
-* Face Embedding Generation
+* PDF Payslip Generation
+* Attendance Analytics
+* Attendance Reports Export
+* Employee Search
+* API Logging System
+* Email Notification System
 * Liveness Detection
 * Anti-Spoofing Protection
 * Unknown Face Detection
-* Email Alert System
 * Role-Based Access Control
-* Modern CustomTkinter GUI
+* Admin Dashboard
+* HR Dashboard
+* Employee Dashboard
+* Flask REST API Integration
+* SQLite Database Integration
+
 Data Storage, Reports and Generated Files
 Attendance Records:
 attendance/attendance.csv
@@ -680,6 +753,19 @@ Benefits:
 Automated Salary Documentation,
 Employee Salary Records
 
+# How To Run
+
+## Start API Server
+
+```bash
+python biometric_api.py
+# Start Main Application:
+python login.py
+# Direct Attendance Recognition:
+python recognize.py
+# Generate Embeddings:
+python generate_embeddings.py
+
 # Future Enhancements
 * Cloud Database Integration
 * Mobile Application
@@ -691,7 +777,7 @@ Employee Salary Records
 ---
 
 # Developer
-Madichetty Sairuchitha
+Madichetty Sai Ruchitha
 ## Project Domain
 Artificial Intelligence (AI)
 Computer Vision
