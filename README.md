@@ -577,6 +577,7 @@ Step 7:
 Attendance is marked automatically.
 Step 8:
 Attendance records are stored in SQLite Database.
+
 # Database Storage
 The application stores information in SQLite database:
 ```text
@@ -589,6 +590,7 @@ Stored Data:
 * Department Information
 * Login Credentials
 * Payroll Information
+
 ---
 # Key Features of ChronosFace AI
 * Face Recognition Attendance
@@ -668,6 +670,7 @@ Working Hours Information
 
 Usage:
 Administrators and HR personnel can generate reports for attendance analysis and record keeping.
+
 ---
 ## Employee Database
 
@@ -705,6 +708,7 @@ Benefits:
 Centralized Data Storage,
 Fast Data Retrieval,
 Secure Record Management.
+
 ---
 ## Employee Face Dataset
 
@@ -724,6 +728,7 @@ Employee Registration
 Face Capture
 Dataset Storage
 Embedding Generation.
+
 ---
 ## Face Embeddings
 
@@ -793,6 +798,7 @@ Benefits:
 Visitor Tracking,
 Visitor Verification,
 Entry Monitoring.
+
 ---
 ## Payslip Records
 
