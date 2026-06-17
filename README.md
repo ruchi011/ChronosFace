@@ -26,11 +26,13 @@ The major objectives of ChronosFace AI are:
 * Generate attendance reports automatically.
 * Generate payroll and payslips.
 * Provide role-based dashboards.
+
 ---
 # Technology Stack
 ## Programming Language
 * Python 3.x
 Python is used as the primary development language because of its rich AI, Machine Learning, and Computer Vision ecosystem.
+
 ---
 ## Database
 ### SQLite
@@ -45,7 +47,8 @@ Advantages:
 * Lightweight
 * Fast
 * No separate server required
-* Easy integration with Python
+* Easy integration with Python.
+
 ---
 ## GUI Framework
 ### CustomTkinter
@@ -62,6 +65,7 @@ Provides a professional appearance compared to traditional Tkinter.
 ### Flask
 
 Flask is used to implement a lightweight REST API layer that enables communication between client dashboards and the centralized attendance server.
+
 ---
 # System Architecture
 
@@ -97,6 +101,7 @@ Flask is used to implement a lightweight REST API layer that enables communicati
 
 # APIs and Libraries Used
 ChronosFace follows a Client-Server Architecture using Flask REST APIs. The GUI dashboards communicate with the Flask server through HTTP requests, and all data is stored and retrieved from SQLite.
+
 ---
 
 ## 1. OpenCV API
@@ -148,7 +153,8 @@ The system compares these vectors and calculates similarity.
 Advantages:
 * High Accuracy
 * Fast Recognition
-* Robust Performance
+* Robust Performance.
+
 ---
 ## 3. MediaPipe Face Mesh API
 Library:
@@ -160,7 +166,7 @@ Purpose:
 * Eye Blink Detection
 * Smile Detection
 * Head Movement Verification
-Features:
+
 ### Blink Detection
 
 The system calculates Eye Aspect Ratio (EAR).
@@ -169,6 +175,7 @@ The system calculates Eye Aspect Ratio (EAR).
 - Eyes Open → EAR increases
 
 The system verifies real human presence.
+
 ---
 ### Smile Detection
 
@@ -179,6 +186,7 @@ The system measures mouth opening and facial expressions.
 
 Purpose:
 To ensure that the detected face belongs to a real person and not a static image.
+
 ---
 
 ### Head Movement Verification
@@ -201,6 +209,7 @@ Verification Process:
 
 Purpose:
 Prevents spoofing attacks using printed photographs.
+
 ---
 ## 4. NumPy API
 Library:
@@ -287,6 +296,7 @@ Advantages:
 * Faster Recognition
 * Lower Storage Requirements
 * Better Accuracy.
+
 ---
 ## Cosine Similarity
 Used to compare embeddings.
@@ -295,6 +305,7 @@ Range:
 1 → Exact Match
 Threshold:0.70+
 Recognition accepted.
+
 ---
 # Security Features
 ## Liveness Detection
@@ -305,8 +316,10 @@ Prevents:
 Techniques:
 * Blink Verification
 * Smile Verification
-* Head Movement Verification
+* Head Movement Verification.
+
 ---
+
 ## Screen Spoof Detection
 
 The system uses FFT (Fast Fourier Transform) analysis to identify digital screen artifacts.
@@ -325,6 +338,7 @@ If spoofing is detected:
 
 Purpose:
 Prevents unauthorized access using images displayed on electronic devices.
+
 ---
 ## Replay Attack Detection
 
@@ -344,6 +358,7 @@ If a replay attack is detected:
 
 Purpose:
 Protects the system against video replay attacks and recorded face presentations.
+
 ---
 # Project Modules
 ## Admin Module
