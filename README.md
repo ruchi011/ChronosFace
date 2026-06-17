@@ -64,7 +64,7 @@ Provides a professional appearance compared to traditional Tkinter.
 Flask is used to implement a lightweight REST API layer that enables communication between client dashboards and the centralized attendance server.
 ---
 # System Architecture
-
+---text
 Admin Dashboard
 HR Dashboard
 Employee Dashboard
