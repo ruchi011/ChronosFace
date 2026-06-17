@@ -717,11 +717,12 @@ dataset/
 
 **Purpose**
 Stores captured employee face images.
+
 Workflow:
 Employee Registration
 Face Capture
 Dataset Storage
-Embedding Generation
+Embedding Generation.
 ---
 ## Face Embeddings
 
@@ -814,6 +815,7 @@ Usage:Generated through Payroll Module.
 Benefits:
 Automated Salary Documentation,
 Employee Salary Records.
+
 ---
 # Future Enhancements
 * Cloud Database Integration
