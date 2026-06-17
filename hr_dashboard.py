@@ -1,10 +1,46 @@
 import customtkinter as ctk
 import subprocess
 import sys
+import requests
 from tkinter import messagebox
+from admin_dashboard import load_employee_table
+from admin_dashboard import load_employee_table
+from attendance_export import export_attendance
 from profile_window import open_profile
 from change_password import open_change_password
 from payslip_generator import generate_payslip
+import sqlite3
+from datetime import datetime
+import matplotlib.pyplot as plt
+def load_hr_employees():
+    employees_box.delete("1.0", "end")
+    employees_box.insert(
+        "end",
+        "Employee Details\n\n"
+    )
+    try:
+        response = requests.get(
+            "http://127.0.0.1:5000/api/employees"
+        )
+        employees = response.json()
+        for emp in employees:
+            employees_box.insert(
+                "end",
+                f"{emp['employee_id']}    "
+                f"{emp['employee_name']}    "
+                f"{emp['department']}\n"
+            )
+    except Exception as e:
+        employees_box.insert(
+            "end",
+            f"Error: {e}"
+        )
+def auto_refresh_hr():
+    load_hr_employees()
+    app.after(
+        3000,
+        auto_refresh_hr
+    )
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 app = ctk.CTk()
@@ -43,14 +79,18 @@ reports_page = ctk.CTkFrame(main_frame)
 wfh_page = ctk.CTkFrame(main_frame)
 payroll_page = ctk.CTkFrame(main_frame)
 settings_page = ctk.CTkFrame(main_frame)
+leave_page = ctk.CTkFrame(main_frame)
+logs_page = ctk.CTkFrame(main_frame)
 for frame in (
     dashboard_page,
     employees_page,
     attendance_page,
     reports_page,
+    leave_page,
     wfh_page,
     payroll_page,
-    settings_page
+    settings_page,
+    logs_page,
 ):
     frame.place(
         relwidth=1,
@@ -94,6 +134,16 @@ reports_btn = ctk.CTkButton(
     command=lambda: show_page(reports_page)
 )
 reports_btn.pack(pady=10)
+leave_btn = ctk.CTkButton(
+    sidebar,
+    text="Leave Requests",
+    width=200,
+    height=50,
+    font=("Arial",20),
+    command=lambda:
+        show_page(leave_page)
+)
+leave_btn.pack(pady=10)
 wfh_btn = ctk.CTkButton(
     sidebar,
     text="Work From Home",
@@ -197,6 +247,48 @@ cards_frame = ctk.CTkFrame(
 cards_frame.pack(
     pady=20
 )
+conn = sqlite3.connect(
+    "database/chronosface.db"
+)
+
+cursor = conn.cursor()
+
+cursor.execute(
+    "SELECT COUNT(*) FROM biometric_data"
+)
+total_employees = cursor.fetchone()[0]
+
+today = datetime.now().strftime(
+    "%Y-%m-%d"
+)
+
+cursor.execute("""
+SELECT COUNT(*)
+FROM attendance
+WHERE date=?
+""", (today,))
+present_today = cursor.fetchone()[0]
+
+absent_today = (
+    total_employees
+    - present_today
+)
+
+cursor.execute("""
+SELECT AVG(
+CAST(
+REPLACE(working_hours,':','.')
+AS REAL
+))
+FROM attendance
+""")
+
+avg_hours = cursor.fetchone()[0]
+
+if avg_hours is None:
+    avg_hours = 0
+
+conn.close()
 def create_card(parent, title, value, color):
     card = ctk.CTkFrame(
         parent,
@@ -226,25 +318,25 @@ def create_card(parent, title, value, color):
 create_card(
     cards_frame,
     "Total Employees",
-    "25",
+    str(total_employees),
     "green"
 )
 create_card(
     cards_frame,
     "Present Today",
-    "19",
+    str(present_today),
     "cyan"
 )
 create_card(
     cards_frame,
     "Absent",
-    "6",
+    str(absent_today),
     "red"
 )
 create_card(
     cards_frame,
     "Avg Work Hours",
-    "7.5h",
+    f"{avg_hours:.1f}",
     "orange"
 )
 employees_title = ctk.CTkLabel(
@@ -253,6 +345,13 @@ employees_title = ctk.CTkLabel(
     font=("Segoe UI", 42, "bold")
 )
 employees_title.pack(pady=30)
+search_employee = ctk.CTkEntry(
+    employees_page,
+    width=300,
+    height=40,
+    placeholder_text="Search Employee"
+)
+search_employee.pack(pady=10)
 employees_box = ctk.CTkTextbox(
     employees_page,
     width=900,
@@ -260,28 +359,35 @@ employees_box = ctk.CTkTextbox(
     font=("Consolas", 18)
 )
 employees_box.pack(pady=20)
-employees_box.insert(
-    "end",
-    "Employee Details\n\n"
+search_employee.bind(
+    "<KeyRelease>",
+    lambda e: load_employee_table()
 )
-employees_box.insert(
-    "end",
-    "1040    Ruchitha    IT\n"
-)
-employees_box.insert(
-    "end",
-    "1041    John        HR\n"
-)
-employees_box.insert(
-    "end",
-    "1042    Tony        Finance\n"
-)
+load_hr_employees()
 attendance_title = ctk.CTkLabel(
     attendance_page,
     text="Attendance",
     font=("Segoe UI", 42, "bold")
 )
 attendance_title.pack(pady=30)
+attendance_search = ctk.CTkEntry(
+    attendance_page,
+    placeholder_text="Search Employee"
+)
+attendance_search.pack(pady=10)
+keyword = attendance_search.get()
+cursor.execute("""
+SELECT
+employee_id,
+employee_name
+FROM attendance
+WHERE date=?
+AND name LIKE ?
+""",
+(
+today,
+f"%{keyword}%"
+))
 attendance_box = ctk.CTkTextbox(
     attendance_page,
     width=900,
@@ -293,18 +399,106 @@ attendance_box.insert(
     "end",
     "Today's Attendance\n\n"
 )
-attendance_box.insert(
-    "end",
-    "1040    Ruchitha    Present\n"
+def load_attendance_data():
+
+    attendance_box.delete(
+        "1.0",
+        "end"
+    )
+
+    attendance_box.insert(
+        "end",
+        "Today's Attendance\n\n"
+    )
+
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT
+    employee_id,
+    employee_name
+    FROM attendance
+    WHERE date=?
+    """,
+    (
+        datetime.now().strftime(
+            "%Y-%m-%d"
+        ),
+    ))
+
+    rows = cursor.fetchall()
+
+    for row in rows:
+
+        attendance_box.insert(
+            "end",
+            f"{row[0]}    "
+            f"{row[1]}    "
+            f"Present\n"
+        )
+
+    conn.close()
+load_attendance_data()
+def show_attendance_graph():
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT
+        name,
+        working_hours
+    FROM attendance
+    """)
+    data = cursor.fetchall()
+    conn.close()
+    names = []
+    hours = []
+    for row in data:
+        names.append(row[0])
+        try:
+            hours.append(
+                float(
+                    row[1].split(":")[0]
+                )
+            )
+        except:
+            hours.append(0)
+    plt.figure(figsize=(8,5))
+    plt.bar(
+        names,
+        hours
+    )
+    plt.title(
+        "Employee Working Hours"
+    )
+    plt.xlabel(
+        "Employees"
+    )
+    plt.ylabel(
+        "Hours"
+    )
+    plt.show()
+analytics_btn = ctk.CTkButton(
+    dashboard_page,
+    text="Show Analytics",
+    width=250,
+    height=50,
+    command=show_attendance_graph
 )
-attendance_box.insert(
-    "end",
-    "1041    John        Present\n"
+analytics_btn.pack(
+    pady=20
 )
-attendance_box.insert(
-    "end",
-    "1042    Tony        Absent\n"
+graph_btn = ctk.CTkButton(
+    attendance_page,
+    text="Show Analytics Graph",
+    command=show_attendance_graph
 )
+graph_btn.pack(pady=10)
 reports_title = ctk.CTkLabel(
     reports_page,
     text="📄 Reports",
@@ -322,18 +516,232 @@ reports_box.insert(
     "end",
     "Attendance Reports\n\n"
 )
-reports_box.insert(
-    "end",
-    "Ruchitha   95%\n"
+def load_reports():
+
+    reports_box.delete(
+        "1.0",
+        "end"
+    )
+
+    reports_box.insert(
+        "end",
+        "Attendance Reports\n\n"
+    )
+
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT
+    employee_id,
+    employee_name
+    FROM biometric_data
+    """)
+
+    employees = cursor.fetchall()
+
+    for emp in employees:
+
+        cursor.execute("""
+        SELECT COUNT(*)
+        FROM attendance
+        WHERE employee_id=?
+        AND strftime('%Y-%m', date)=strftime('%Y-%m','now')
+        """,
+        (emp[0],))
+
+        present_days = (
+            cursor.fetchone()[0]
+        )
+
+        percentage = (
+            present_days / 30
+        ) * 100
+
+        reports_box.insert(
+            "end",
+            f"{emp[1]}    "
+            f"{percentage:.1f}%\n"
+        )
+
+    conn.close()
+load_reports()
+def export_report():
+    path = export_attendance()
+    messagebox.showinfo(
+        "Success",
+        f"Report Saved\n{path}"
+    )
+export_btn = ctk.CTkButton(
+    reports_page,
+    text="Export Attendance CSV",
+    width=250,
+    height=45,
+    command=export_report
 )
-reports_box.insert(
-    "end",
-    "John       90%\n"
+export_btn.pack(
+    pady=10
 )
-reports_box.insert(
-    "end",
-    "Tony       82%\n"
+leave_title = ctk.CTkLabel(
+    leave_page,
+    text="Leave Requests",
+    font=("Segoe UI",42,"bold")
 )
+leave_title.pack(pady=30)
+leave_box = ctk.CTkTextbox(
+    leave_page,
+    width=900,
+    height=500,
+    font=("Consolas",18)
+)
+leave_box.pack(pady=20)
+leave_id_entry = ctk.CTkEntry(
+    leave_page,
+    width=250,
+    height=40,
+    placeholder_text="Enter Leave ID"
+)
+leave_id_entry.pack(pady=10)
+def load_pending_leaves():
+    leave_box.delete("1.0","end")
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT
+    id,
+    employee_id,
+    employee_name,
+    leave_date,
+    reason,
+    status
+    FROM leaves
+    WHERE status='Pending'
+    """)
+    rows = cursor.fetchall()
+    for row in rows:
+        leave_box.insert(
+            "end",
+            f"ID:{row[0]} | "
+            f"{row[2]} | "
+            f"{row[3]} | "
+            f"{row[4]} | "
+            f"{row[5]}\n"
+        )
+    conn.close()
+load_pending_leaves()
+def approve_leave():
+    leave_id = leave_id_entry.get()
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE leaves
+    SET status='Approved'
+    WHERE id=?
+    """,
+    (leave_id,))
+    cursor.execute("""
+    SELECT name
+    FROM leaves
+    WHERE id=?
+    """,(leave_id,))
+    employee = cursor.fetchone()
+    if employee:
+        cursor.execute("""
+        INSERT INTO api_logs
+        (
+            endpoint,
+            employee_name,
+            action,
+            log_time
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            "/leave/status",
+            employee[0],
+            "LEAVE_APPROVED",
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        ))
+    conn.commit()
+    conn.close()
+    messagebox.showinfo(
+        "Success",
+        "Leave Approved"
+    )
+    load_pending_leaves()
+approve_btn = ctk.CTkButton(
+    leave_page,
+    text="Approve Leave",
+    width=220,
+    height=45,
+    fg_color="green",
+    command=approve_leave
+)
+approve_btn.pack(pady=5)
+def reject_leave():
+    leave_id = leave_id_entry.get()
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE leaves
+    SET status='Rejected'
+    WHERE id=?
+    """,
+    (leave_id,))
+    cursor.execute("""
+    SELECT name
+    FROM leaves
+    WHERE id=?
+    """,(leave_id,))
+
+    employee = cursor.fetchone()
+
+    if employee:
+        cursor.execute("""
+        INSERT INTO api_logs
+        (
+            endpoint,
+            employee_name,
+            action,
+            log_time
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            "/leave/status",
+            employee[0],
+            "LEAVE_REJECTED",
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        ))
+    conn.commit()
+    conn.close()
+    messagebox.showinfo(
+        "Success",
+        "Leave Rejected"
+    )
+    load_pending_leaves()
+reject_btn = ctk.CTkButton(
+    leave_page,
+    text="Reject Leave",
+    width=220,
+    height=45,
+    fg_color="red",
+    command=reject_leave
+)
+reject_btn.pack(pady=5)
 wfh_title = ctk.CTkLabel(
     wfh_page,
     text="Work From Home",
@@ -376,17 +784,61 @@ payroll_box.insert(
     "end",
     "1040    Ruchitha    ₹50,000\n"
 )
+conn = sqlite3.connect(
+    "database/chronosface.db"
+)
+cursor = conn.cursor()
+cursor.execute("""
+SELECT
+    employee_id,
+    employee_name
+FROM biometric_data
+""")
+records = cursor.fetchall()
+conn.close()
+employee_options = [
+    f"{row[0]} - {row[1]}"
+    for row in records
+]
 def create_payslip():
-    file_path = generate_payslip(
-        "1040",
-        "Ruchitha",
-        "IT",
-        50000
+    selected = employee_dropdown.get()
+    employee_id = selected.split(" - ")[0]
+    conn = sqlite3.connect(
+        "database/chronosface.db"
     )
-    messagebox.showinfo(
-        "Success",
-        f"Payslip Generated\n\n{file_path}"
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT
+        employee_name,
+        department
+    FROM biometric_data
+    WHERE employee_id=?
+    """,
+    (employee_id,)
     )
+    employee = cursor.fetchone()
+    conn.close()
+    if employee:
+        employee_name = employee[0]
+        department = employee[1]
+        file_path = generate_payslip(
+            employee_id,
+            employee_name,
+            department,
+            50000
+        )
+        messagebox.showinfo(
+            "Success",
+            f"Payslip Generated\n\n{file_path}"
+        )
+employee_dropdown = ctk.CTkComboBox(
+    payroll_page,
+    values=employee_options,
+    width=300
+)
+employee_dropdown.pack(
+    pady=10
+)
 generate_btn = ctk.CTkButton(
     payroll_page,
     text="📄 Generate Payslip",
@@ -472,4 +924,5 @@ password_btn = ctk.CTkButton(
 )
 password_btn.pack(pady=20)
 show_page(dashboard_page)
+auto_refresh_hr()
 app.mainloop()

@@ -328,17 +328,13 @@ python recognize.py
 ### Functionality
 
 The system activates the webcam and continuously captures live video frames.
-
 The following operations are performed:
-
 1. Face Detection using InsightFace.
 2. Liveness Detection using:
-
    * Blink Detection
    * Smile Detection
    * Head Movement Verification
 3. Anti-Spoofing Verification:
-
    * Screen Spoof Detection
    * Replay Attack Detection
 4. Face Embedding Extraction.
@@ -348,9 +344,7 @@ The following operations are performed:
 8. Attendance Record Storage in SQLite Database.
 9. Unknown Face Detection and Storage.
 10. Email Alert Generation for unauthorized persons.
-
 ### Features
-
 * Real-Time Face Recognition
 * Automatic Attendance Marking
 * Blink Verification
@@ -359,219 +353,144 @@ The following operations are performed:
 * Anti-Spoofing Protection
 * Unknown Face Monitoring
 * Email Alerts
-
 ---
-
 ## Method 2: Complete Application Workflow
-
 The complete application starts by running:
-
 ```bash
 python login.py
 ```
-
 ### Login Window
-
 The Login Window serves as the main entry point of the application.
-
 The user is presented with three options:
-
 1. Admin Login
 2. HR Login
 3. Employee Login
-
 The user selects the appropriate role and enters credentials.
-
 ---
-
 # Admin Module
-
 ### Access
-
 Admin Login → Admin Dashboard
-
 ### Functionalities
-
 The Admin Dashboard provides complete control over the system.
-
 #### Employee Management
-
 * Add Employees
 * Modify Employee Details
 * Delete Employees
 * Search Employees
-
 #### Face Recognition Management
-
 * Capture Employee Dataset
 * Generate Face Embeddings
 * Train Recognition System
-
 #### Attendance Management
-
 * View Attendance Records
 * Generate Attendance Reports
 * Monitor Employee Activity
-
 #### Visitor Management
-
 * Visitor Registration
 * Visitor Tracking
 * Visitor Reports
 * Visitor Whitelist
 * Visitor Blacklist
-
 #### Payroll Management
-
 * Salary Management
 * Payslip Generation
 * Payroll Reports
-
 #### Department Management
-
 * Create Departments
 * Manage Employee Groups
-
 ### Admin Features
-
 * Complete System Control
 * Attendance Monitoring
 * Employee Monitoring
 * Visitor Monitoring
 * Payroll Processing
 * Report Generation
-
 ---
-
 # HR Module
-
 ### Access
-
 HR Login → HR Dashboard
-
 ### Functionalities
-
 The HR Dashboard focuses on employee administration and attendance monitoring.
-
 #### Employee Operations
-
 * View Employee Information
 * Search Employee Records
 * Update Employee Information
-
 #### Attendance Operations
-
 * View Attendance Reports
 * Monitor Attendance Status
 * Export Attendance Data
-
 #### Payroll Operations
-
 * Generate Payslips
 * Process Salary Information
-
 ### HR Features
-
 * Employee Monitoring
 * Attendance Monitoring
 * Payroll Support
 * Report Generation
-
 ---
-
 # Employee Module
-
 ### Access
-
 Employee Login → Employee Dashboard
-
 ### Functionalities
-
 Employees can access their personal information and attendance records.
-
 #### Profile Management
-
 * View Profile Information
 * View Employee Details
-
 #### Attendance Management
-
 * View Attendance History
 * Check Attendance Status
 * Monitor Working Hours
-
 #### Account Management
-
 * Change Password
 * Update Personal Information
-
 ### Employee Features
-
 * Self-Service Dashboard
 * Attendance Tracking
 * Profile Management
 * Password Management
-
 ---
-
 # Face Recognition Workflow
-
 Step 1:
 Employee Face Images are captured using:
-
 ```bash
 python capture_dataset.py
 ```
-
 Step 2:
 Face Embeddings are generated using:
-
 ```bash
 python generate_embeddings.py
 ```
-
 Step 3:
 Embeddings are stored inside:
-
 ```text
 embeddings/face_embeddings.pkl
 ```
-
 Step 4:
 Live Face Recognition starts through:
-
 ```bash
 python recognize.py
 ```
-
 Step 5:
 Liveness Detection is performed.
-
 Step 6:
 Face Matching is performed using Cosine Similarity.
-
 Step 7:
 Attendance is marked automatically.
-
 Step 8:
 Attendance records are stored in SQLite Database.
 # Database Storage
 The application stores information in SQLite database:
-
 ```text
 database/chronosface.db
 ```
-
 Stored Data:
 * Employee Information
-* Attendance Records
-* Visitor Records
+* Attendence records
+* Visitor records
 * Department Information
 * Login Credentials
 * Payroll Information
-
 ---
-
 # Key Features of ChronosFace AI
 * Face Recognition Attendance
 * Employee Management
@@ -588,7 +507,7 @@ Stored Data:
 * Role-Based Access Control
 * Modern CustomTkinter GUI
 Data Storage, Reports and Generated Files
-Attendance Records
+Attendance Records:
 attendance/attendance.csv
 
 Purpose:

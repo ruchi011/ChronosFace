@@ -3,14 +3,10 @@ from reportlab.platypus import (
     Paragraph,
     Spacer
 )
-
 from reportlab.lib.styles import getSampleStyleSheet
-
 from reportlab.lib.pagesizes import letter
-
 import os
-
-
+import sqlite3
 def generate_payslip(
     employee_id,
     employee_name,
@@ -47,18 +43,31 @@ def generate_payslip(
     elements.append(
         Spacer(1, 20)
     )
-    present_days = 26
-
-    absent_days = 4
-
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM attendance
+    WHERE employee_id=?
+    AND strftime('%Y-%m', date)=strftime('%Y-%m','now')
+    """,
+    (employee_id,))
+    present_days = cursor.fetchone()[0]
+    absent_days = max(
+        0,
+        30 - present_days
+    )
+    conn.close()
     per_day_salary = salary / 30
-
     absence_deduction = (
         absent_days * per_day_salary
     )
-
-    overtime_bonus = 2000
-
+    if present_days >= 28:
+        overtime_bonus = 3000
+    else:
+        overtime_bonus = 1000
     net_salary = (
         salary
         - absence_deduction

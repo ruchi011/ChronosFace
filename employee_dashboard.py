@@ -1,3 +1,7 @@
+from urllib import response
+import requests
+from tkinter import simpledialog
+from tkinter import messagebox
 import customtkinter as ctk
 import sqlite3
 import sys
@@ -7,9 +11,12 @@ from PIL import Image
 import os
 from tkinter import messagebox
 from datetime import datetime
+from attendance_export import export_attendance
 from profile_window import open_profile
 from change_password import open_change_password
 import os
+import requests
+from datetime import datetime
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 employee_id = sys.argv[1]
@@ -83,8 +90,8 @@ conn = sqlite3.connect(
 )
 cursor = conn.cursor()
 cursor.execute("""
-SELECT name, department, email
-FROM employees
+SELECT employee_name, department, email
+FROM biometric_data
 WHERE employee_id = ?
 """, (employee_id,))
 employee = cursor.fetchone()
@@ -151,6 +158,144 @@ details_label.pack(
     pady=25,
     padx=160
 )
+attendance_btn_frame = ctk.CTkFrame(
+    main_frame,
+    fg_color="transparent"
+)
+attendance_btn_frame.pack(pady=20)
+def clock_in():
+    data = {
+        "employeeId": employee_id,
+        "employeeName": employee_name,
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "clockIn": datetime.now().strftime("%H:%M:%S")
+    }
+    response = requests.post(
+        "http://127.0.0.1:5000/api/attendance/clockin",
+        json=data
+    )
+    print("Showing popup now...")
+    if response.status_code == 200:
+        app.focus_force()
+        app.lift()
+        app.after(
+            100,
+            lambda:messagebox.showinfo(
+                parent=app,
+                title="Success",
+                message="Clock In Successful"
+            )
+        )
+        load_attendance()
+        load_today_status()
+
+    else:
+        messagebox.showerror(
+            "Error",
+            "Clock In Failed"
+        )
+def start_break():
+    data = {
+        "employeeId": employee_id
+    }
+    response = requests.post(
+        "http://127.0.0.1:5000/api/attendance/startbreak",
+        json=data
+    )
+    if response.status_code == 200:
+        app.focus_force()
+        app.lift()
+        app.after(
+            100,
+            lambda: messagebox.showinfo(
+                "Success",
+                "Break Started"
+            )
+        )
+        load_attendance()
+        load_today_status()
+def end_break():
+    data = {
+        "employeeId": employee_id,
+        "employeeName": employee_name   
+    }
+    response = requests.post(
+        "http://127.0.0.1:5000/api/attendance/endbreak",
+        json=data
+    )
+    if response.status_code == 200:
+        app.focus_force()
+        app.lift()
+        app.after(
+            100,
+            lambda: messagebox.showinfo(
+                "Success",
+                "Break Ended"
+            )
+        )
+        load_attendance()
+        load_today_status()
+    else:
+        messagebox.showerror(
+            "Error",
+            "Failed to End Break"
+        )
+def clock_out():
+    print("CLOCK OUT BUTTON CLICKED")
+    data = {
+        "employeeId": employee_id,
+        "employeeName": employee_name
+    }
+    response = requests.post(
+        "http://127.0.0.1:5000/api/attendance/clockout",
+        json=data
+    )
+    if response.status_code == 200:
+        app.focus_force()
+        app.lift()
+        app.after(
+            100,
+            lambda: messagebox.showinfo(
+                "Success",
+                "Clock Out Successful"
+            )
+        )
+        load_attendance()
+        load_today_status()
+    else:
+        messagebox.showerror(
+            "Error",
+            "Clock Out Failed"
+        )
+        
+clockin_btn = ctk.CTkButton(
+    attendance_btn_frame,
+    text="Clock In",
+    width=180,
+    command=clock_in
+)
+clockin_btn.grid(row=0, column=0, padx=10)
+break_btn = ctk.CTkButton(
+    attendance_btn_frame,
+    text="Start Break",
+    width=180,
+    command=start_break
+)
+break_btn.grid(row=0, column=1, padx=10)
+endbreak_btn = ctk.CTkButton(
+    attendance_btn_frame,
+    text="End Break",
+    width=180,
+    command=end_break
+)
+endbreak_btn.grid(row=1, column=0, padx=10, pady=10)
+clockout_btn = ctk.CTkButton(
+    attendance_btn_frame,
+    text="Clock Out",
+    width=180,
+    command=clock_out
+)
+clockout_btn.grid(row=1, column=1, padx=10, pady=10)
 conn = sqlite3.connect(
     "database/chronosface.db"
 )
@@ -225,15 +370,44 @@ status_textbox.pack(
     padx=20,
     pady=20
 )
-status_textbox.insert(
-    "end",
-    f"""
-Status : {status_text}
-Clock In : {clock_in}
-Clock Out : {clock_out}
-Working Hours : {work_hours}
+def load_today_status():
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT
+        clock_in,
+        clock_out,
+        working_hours
+    FROM attendance
+    WHERE employee_id=?
+    ORDER BY id DESC
+    LIMIT 1
+    """,
+    (employee_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    status_textbox.configure(state="normal")
+    status_textbox.delete("1.0","end")
+    if row:
+        status_textbox.insert(
+            "end",
+            f"""
+Status : Present
+Clock In : {row[0]}
+Clock Out : {row[1]}
+Working Hours : {row[2]}
 """
-)
+        )
+    else:
+        status_textbox.insert(
+            "end",
+            "Absent"
+        )
+    status_textbox.configure(state="disabled")
+load_today_status()
 status_textbox.configure(state="disabled")
 summary_dropdown = ctk.CTkFrame(
     main_frame,
@@ -283,12 +457,30 @@ summary_textbox.pack(
     padx=20,
     pady=20
 )
+conn = sqlite3.connect(
+    "database/chronosface.db"
+)
+cursor = conn.cursor()
+cursor.execute("""
+SELECT COUNT(*)
+FROM attendance
+WHERE employee_id=?
+AND strftime('%Y-%m', date)=strftime('%Y-%m','now')
+""",
+(employee_id,))
+present_days = cursor.fetchone()[0]
+absent_days = 30 - present_days
+attendance_percent = round(
+    (present_days / 30) * 100,
+    2
+)
+conn.close()
 summary_textbox.insert(
     "end",
-    """
-Present Days : 22
-Absent Days : 2
-Attendance : 91%
+    f"""
+Present Days : {present_days}
+Absent Days : {absent_days}
+Attendance : {attendance_percent} %
 """
 )
 summary_textbox.configure(state="disabled")
@@ -341,66 +533,6 @@ attendance_box.pack(
     padx=20,
     pady=20
 )
-def open_leave_window():
-    leave_window = ctk.CTkToplevel(app)
-    leave_window.title("Apply Leave")
-    leave_window.geometry("500x500")
-    leave_window.configure(fg_color="#1e1e1e")
-    leave_window.focus()
-    leave_window.grab_set()
-    leave_window.lift()
-    title = ctk.CTkLabel(
-        leave_window,
-        text="Apply Leave",
-        font=("Arial", 32, "bold")
-    )
-    title.pack(pady=30)
-    leave_date_entry = ctk.CTkEntry(
-        leave_window,
-        width=320,
-        height=50,
-        placeholder_text="Leave Date (YYYY-MM-DD)"
-    )
-    leave_date_entry.pack(pady=20)
-    reason_entry = ctk.CTkEntry(
-        leave_window,
-        width=320,
-        height=50,
-        placeholder_text="Reason"
-    )
-    reason_entry.pack(pady=20)
-    def submit_leave():
-        conn = sqlite3.connect(
-            "database/chronosface.db"
-        )
-        cursor = conn.cursor()
-        cursor.execute("""
-        INSERT INTO leaves (
-            employee_id,
-            name,
-            leave_date,
-            reason,
-            status
-        )
-        VALUES (?, ?, ?, ?, ?)
-        """, (
-            employee_id,
-            employee_name,
-            leave_date_entry.get(),
-            reason_entry.get(),
-            "Pending"
-        ))
-        conn.commit()
-        conn.close()
-        leave_window.destroy()
-    submit_btn = ctk.CTkButton(
-        leave_window,
-        text="Submit Leave",
-        width=250,
-        height=50,
-        command=submit_leave
-    )
-    submit_btn.pack(pady=30)
 def load_attendance():
     attendance_box.configure(state="normal")
     attendance_box.delete("1.0", "end")
@@ -429,68 +561,32 @@ def load_attendance():
     records = cursor.fetchall()
     conn.close()
     for row in records:
+        date = row[0] if row[0] else "-"
+        clock_in = row[1] if row[1] else "-"
+        clock_out = row[2] if row[2] else "-"
+        total_break = row[3] if row[3] else "-"
+        working_hours = row[4] if row[4] else "-"
         attendance_box.insert(
             "end",
-            f"{row[0]:<13}{row[1]:<14}{row[2]:<14}{row[3]:<13}{row[4]}\n"
+            f"{date:<13}{clock_in:<14}{clock_out:<14}{total_break:<13}{working_hours}\n"
         )
     attendance_box.configure(state="disabled")
 load_attendance()
-def clock_out():
-    current_time = datetime.now().strftime(
-        "%H:%M:%S"
-    )
-    conn = sqlite3.connect(
-        "database/chronosface.db"
-    )
-    cursor = conn.cursor()
-    cursor.execute("""
-    SELECT clock_in
-    FROM attendance
-    WHERE employee_id = ?
-    AND date = date('now')
-    """, (employee_id,))
-    result = cursor.fetchone()
-    if result:
-        clock_in_time = result[0]
-        in_time = datetime.strptime(
-            clock_in_time,
-            "%H:%M:%S"
-        )
-        out_time = datetime.strptime(
-            current_time,
-            "%H:%M:%S"
-        )
-        work_duration = (
-            out_time - in_time
-        )
-        cursor.execute("""
-        UPDATE attendance
-        SET
-            clock_out = ?,
-            working_hours = ?
-        WHERE employee_id = ?
-        AND date = date('now')
-        """, (
-            current_time,
-            str(work_duration),
-            employee_id
-        ))
-        conn.commit()
-        messagebox.showinfo(
-            "Success",
-            "Clock Out Successful"
-        )
-    else:
-        messagebox.showerror(
-            "Error",
-            "No Clock In Found"
-        )
-    conn.close()
+
 def apply_leave():
     leave_window = ctk.CTkToplevel(app)
     leave_window.title("Apply Leave")
-    leave_window.geometry("500x450")
+    leave_window.geometry("550x700")
     leave_window.configure(fg_color="#1e1e1e")
+    leave_window.transient(app)
+    leave_window.grab_set()
+    leave_window.focus_force()
+    leave_window.lift()
+    leave_window.attributes("-topmost", True)
+    leave_window.after(
+        500,
+        lambda: leave_window.attributes("-topmost", False)
+    )
     title = ctk.CTkLabel(
         leave_window,
         text="Leave Application",
@@ -513,6 +609,7 @@ def apply_leave():
     )
     reason_box.pack(pady=20)
     def submit_leave():
+        print("SUBMIT BUTTON CLICKED")
         leave_date = date_entry.get().strip()
         reason = reason_box.get("1.0", "end").strip()
         conn = sqlite3.connect(
@@ -522,7 +619,7 @@ def apply_leave():
         cursor.execute("""
         INSERT INTO leaves (
             employee_id,
-            name,
+            employee_name,
             leave_date,
             reason,
             status
@@ -535,13 +632,36 @@ def apply_leave():
             reason,
             "Pending"
         ))
+        cursor.execute("""
+        INSERT INTO api_logs
+        (
+            endpoint,
+            employee_name,
+            action,
+            log_time
+        )
+        VALUES (?, ?, ?, ?)
+        """, (
+            "/leave/apply",
+            employee_name,
+            "APPLY_LEAVE",
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ))
         conn.commit()
         conn.close()
+        load_leave_history()
+        print("LEAVE SAVED")
+        leave_window.lift()
+        leave_window.focus_force()
         messagebox.showinfo(
-            "Success",
-            "Leave Request Submitted"
+            parent=leave_window,
+            title="Success",
+            message="Leave Request Submitted"
         )
-        leave_window.destroy()
+        leave_window.after(
+            500,
+            leave_window.destroy
+        )
     submit_btn = ctk.CTkButton(
         leave_window,
         text="Submit Leave",
@@ -558,12 +678,148 @@ apply_leave_btn = ctk.CTkButton(
     text="Apply Leave",
     width=250,
     height=50,
-    font=("Arial", 20),
+    font=("Arial",20),
     fg_color="#2563eb",
     hover_color="#1d4ed8",
-    command=open_leave_window
+    command=apply_leave
 )
 apply_leave_btn.pack(pady=10)
+def download_report():
+    export_attendance(employee_id)
+    messagebox.showinfo(
+        "Success",
+        "Attendance Report Generated"
+    )
+download_btn = ctk.CTkButton(
+    main_frame,
+    text="Download Attendance Report",
+    width=250,
+    height=50,
+    command=download_report
+)
+download_btn.pack(pady=10)
+leave_dropdown = ctk.CTkFrame(
+    main_frame,
+    fg_color="#1e293b",
+    corner_radius=20
+)
+leave_dropdown.pack(
+    fill="x",
+    padx=30,
+    pady=20
+)
+leave_content = ctk.CTkFrame(
+    leave_dropdown,
+    fg_color="#0f172a"
+)
+def toggle_leave():
+    if leave_content.winfo_ismapped():
+        leave_content.pack_forget()
+    else:
+        leave_content.pack(
+            fill="x",
+            padx=20,
+            pady=(0,20)
+        )
+leave_button = ctk.CTkButton(
+    leave_dropdown,
+    text="📋 Leave History",
+    height=65,
+    font=("Segoe UI",28,"bold"),
+    fg_color="#1e293b",
+    hover_color="#334155",
+    anchor="w",
+    command=toggle_leave
+)
+leave_button.pack(
+    fill="x",
+    padx=15,
+    pady=15
+)
+leave_box = ctk.CTkTextbox(
+    leave_content,
+    height=200,
+    font=("Consolas",18)
+)
+leave_box.pack(
+    fill="x",
+    padx=20,
+    pady=20
+)
+def load_leave_history():
+    leave_box.configure(state="normal")
+    leave_box.delete("1.0","end")
+    leave_box.insert(
+        "end",
+        "Date          Reason               Status\n"
+    )
+    leave_box.insert(
+        "end",
+        "-------------------------------------------\n"
+    )
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT
+        leave_date,
+        reason,
+        status
+    FROM leaves
+    WHERE employee_id=?
+    """,
+    (employee_id,)
+    )
+    records = cursor.fetchall()
+    conn.close()
+    for row in records:
+        leave_box.insert(
+            "end",
+            f"{row[0]:<14}{row[1]:<20}{row[2]}\n"
+        )
+    leave_box.configure(state="disabled")
+load_leave_history()
+def check_leave_status():
+
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT leave_date,status
+    FROM leaves
+    WHERE employee_id=?
+    ORDER BY id DESC
+    LIMIT 1
+    """,
+    (employee_id,)
+    )
+
+    record = cursor.fetchone()
+
+    conn.close()
+
+    if record:
+
+        leave_date = record[0]
+        status = record[1]
+
+        if status == "Approved":
+
+            messagebox.showinfo(
+                "Leave Approved",
+                f"Your leave for {leave_date} is Approved"
+            )
+
+        elif status == "Rejected":
+
+            messagebox.showerror(
+                "Leave Rejected",
+                f"Your leave for {leave_date} is Rejected"
+            )
 logout_btn = ctk.CTkButton(
     main_frame,
     text="Logout",
@@ -575,4 +831,5 @@ logout_btn = ctk.CTkButton(
     command=app.destroy
 )
 logout_btn.pack(pady=10)
+check_leave_status()
 app.mainloop()

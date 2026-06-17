@@ -22,6 +22,8 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from time import strftime
 from PIL import ImageTk
+import requests
+from attendance_export import export_attendance
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 app = ctk.CTk()
@@ -109,6 +111,7 @@ leave_page = ctk.CTkFrame(main_frame)
 settings_page = ctk.CTkFrame(main_frame)
 payroll_page = ctk.CTkFrame(main_frame)
 groups_page=ctk.CTkFrame(main_frame)
+logs_page = ctk.CTkFrame(main_frame)
 visitor_page = ctk.CTkFrame(
     main_frame,
     fg_color="#1e1e1e"
@@ -122,7 +125,8 @@ for frame in (
     settings_page,
     payroll_page,
     groups_page,
-    visitor_page
+    visitor_page,
+    logs_page,
 ):
     frame.place(
         x=0,
@@ -154,9 +158,18 @@ def load_employee_table():
         "database/chronosface.db"
     )
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT employee_id, name, department FROM employees"
-    )
+    keyword = search_employee_data.get()
+    cursor.execute("""
+    SELECT
+        employee_id,
+        employee_name,
+        department
+    FROM biometric_data
+    WHERE employee_name LIKE ?
+    """,
+    (
+        f"%{keyword}%",
+    ))
     employees = cursor.fetchall()
     conn.close()
     for emp in employees:
@@ -165,6 +178,12 @@ def load_employee_table():
             f"{emp[0]:<10}{emp[1]:<18}{emp[2]}\n"
         )
     employee_table.configure(state="disabled")
+def auto_refresh_employee_table():
+    load_employee_table()
+    app.after(
+        3000,
+        auto_refresh_employee_table
+    )
 def open_add_employee():
     global add_window
     add_window = ctk.CTkToplevel(app)
@@ -213,46 +232,51 @@ def open_add_employee():
         department = emp_dept.get()
         email = emp_email.get()
         try:
-            conn = sqlite3.connect(
-                "database/chronosface.db"
+            print("Calling Flask API...")
+            print("BUTTON CLICKED")
+            response = requests.post(
+                "http://127.0.0.1:5000/api/biometric/register",
+                json={
+                    "employeeId": employee_id,
+                    "employeeName": employee_name,
+                    "department": department,
+                    "email": email,
+                    "phone": "9876543210",
+                    "faceEmbedding": [0.12, 0.34, 0.56]
+                }
             )
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT INTO employees (
-                employee_id,
-                name,
-                department,
-                email
+            print("STATUS:", response.status_code)
+            print("RESPONSE:", response.text)
+            if response.status_code == 200:
+                subprocess.run(
+                    [
+                        sys.executable,
+                        "capture_dataset.py",
+                        employee_name
+                    ]
+                )
+                subprocess.run(
+                    [
+                        sys.executable,
+                        "generate_embeddings.py"
+                    ]
+                )
+                load_employee_table()
+                messagebox.showinfo(
+                    "Success",
+                    "Employee Added Through Server"
+                )
+                add_window.destroy()
+            else:
+                messagebox.showerror(
+                    "Error",
+                    response.text
+                )
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                str(e)
             )
-            VALUES (?, ?, ?, ?)
-            """, (
-                employee_id,
-                employee_name,
-                department,
-                email
-            ))
-            conn.commit()
-            conn.close()
-            subprocess.run(
-                [
-                    sys.executable,
-                    "capture_dataset.py",
-                    employee_name
-                ]
-            )
-            subprocess.run(
-                [
-                    sys.executable,
-                    "generate_embeddings.py"
-                ]
-            )
-            print("Employee Added Successfully")
-            load_employee_table()
-            add_window.destroy()
-        except sqlite3.IntegrityError:
-            print("Employee ID Already Exists")
-        except sqlite3.OperationalError:
-            print("Database is Locked")
     save_btn = ctk.CTkButton(
         add_window,
         text="Save Employee",
@@ -313,21 +337,21 @@ def open_modify_employee():
         cursor.execute("""
         SELECT
             employee_id,
-            name,
+            employee_name,
             department,
             email
-        FROM employees
+        FROM biometric_data
         WHERE employee_id = ?
         """, (employee_id,))
         employee = cursor.fetchone()
         conn.close()
         if employee:
             emp_name.delete(0, "end")
-            emp_name.insert(0, employee[0])
+            emp_name.insert(0, employee[1])
             emp_dept.delete(0, "end")
-            emp_dept.insert(0, employee[1])
+            emp_dept.insert(0, employee[2])
             emp_email.delete(0, "end")
-            emp_email.insert(0, employee[2])
+            emp_email.insert(0, employee[3])
         else:
             print("Employee Not Found")
     def update_employee():
@@ -340,9 +364,9 @@ def open_modify_employee():
         )
         cursor = conn.cursor()
         cursor.execute("""
-        UPDATE employees
+        UPDATE biometric_data
         SET
-            name = ?,
+            employee_name = ?,
             department = ?,
             email = ?
         WHERE employee_id = ?
@@ -351,6 +375,24 @@ def open_modify_employee():
             updated_department,
             updated_email,
             employee_id
+        ))
+        cursor.execute("""
+        INSERT INTO api_logs
+        (
+            endpoint,
+            employee_name,
+            action,
+            log_time
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            "/admin/update",
+            updated_name,
+            "UPDATE_EMPLOYEE",
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
         ))
         conn.commit()
         print(cursor.rowcount)
@@ -408,12 +450,32 @@ def admin_delete_login():
     def verify_admin():
         username = username_entry.get()
         password = password_entry.get()
-        if username == "admin" and password == "admin123":
+        conn = sqlite3.connect(
+            "database/chronosface.db"
+        )
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT *
+        FROM admins
+        WHERE username=?
+        AND password=?
+        """,
+        (
+            username,
+            password
+        ))
+        admin = cursor.fetchone()
+        conn.close()
+        if admin:
+            messagebox.showinfo(
+                "Success",
+                "Admin Verified"
+            )
             login_window.destroy()
             open_delete_employee()
         else:
             messagebox.showerror(
-                "Access Denied",
+                "Error",
                 "Invalid Admin Credentials"
             )
     verify_btn = ctk.CTkButton(
@@ -453,29 +515,30 @@ def open_delete_employee():
         )
         cursor = conn.cursor()
         cursor.execute("""
-        SELECT name
-        FROM employees
+        SELECT employee_name
+        FROM biometric_data
         WHERE employee_id = ?
         """, (employee_id,))
         employee = cursor.fetchone()
         if employee:
             employee_name = employee[0]
             cursor.execute("""
-            DELETE FROM employees
+            DELETE FROM biometric_data
             WHERE employee_id = ?
             """, (employee_id,))
-            conn.commit()
+            cursor.execute("""
+            INSERT INTO api_logs
+            (endpoint, employee_name, action, log_time)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                "/admin/delete",
+                employee_name,
+                "DELETE",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ))
+            conn.commit()   
             conn.close()
-            dataset_path = f"dataset/{employee_name}"
-            if os.path.exists(dataset_path):
-                shutil.rmtree(dataset_path)
-            subprocess.run(
-                [
-                    sys.executable,
-                    "generate_embeddings.py"
-                ]
-            )
-            load_employee_table()
             messagebox.showinfo(
                 "Success",
                 "Employee Deleted Successfully"
@@ -523,8 +586,8 @@ def open_change_photo():
         )
         cursor = conn.cursor()
         cursor.execute("""
-        SELECT name
-        FROM employees
+        SELECT employee_name
+        FROM biometric_data
         WHERE employee_id = ?
         """, (employee_id,))
         employee = cursor.fetchone()
@@ -550,6 +613,32 @@ def open_change_photo():
                     sys.executable,
                     "generate_embeddings.py"
                 ])
+                conn = sqlite3.connect(
+                    "database/chronosface.db"
+                )
+                cursor = conn.cursor()
+
+                cursor.execute("""
+                INSERT INTO api_logs
+                (
+                    endpoint,
+                    employee_name,
+                    action,
+                    log_time
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    "/admin/photo",
+                    employee_name,
+                    "PHOTO_UPDATED",
+                    datetime.now().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                ))
+
+                conn.commit()
+                conn.close()
                 messagebox.showinfo(
                     "Success",
                     "Employee Photo Updated Successfully"
@@ -614,7 +703,7 @@ def show_groups():
     cursor = conn.cursor()
     cursor.execute("""
     SELECT DISTINCT department
-    FROM employees
+    FROM biometric_data
     ORDER BY department
     """)
     departments = cursor.fetchall()
@@ -674,8 +763,8 @@ def show_groups():
             pady=10
         )
         cursor.execute("""
-        SELECT employee_id, name
-        FROM employees
+        SELECT employee_id, employee_name
+        FROM biometric_data
         WHERE department = ?
         ORDER BY name
         """, (department_name,))
@@ -716,6 +805,57 @@ reports_btn = ctk.CTkButton(
     command=lambda: show_page(reports_page)
 )
 reports_btn.pack(pady=12)
+logs_btn = ctk.CTkButton(
+    sidebar,
+    text="📜 Logs",
+    width=220,
+    height=45,
+    font=("Arial",18),
+    command=lambda:
+        show_page(logs_page)
+)
+logs_btn.pack(pady=12)
+def load_logs():
+    logs_box.delete(
+        "1.0",
+        "end"
+    )
+    conn = sqlite3.connect(
+        "database/chronosface.db"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT *
+    FROM api_logs
+    ORDER BY id DESC
+    """)
+    records = cursor.fetchall()
+    conn.close()
+    for row in records:
+        logs_box.insert(
+            "end",
+            f"{row}\n"
+        )
+logs_title = ctk.CTkLabel(
+    logs_page,
+    text="API Logs",
+    font=("Segoe UI",40,"bold")
+)
+logs_title.pack(pady=20)
+logs_box = ctk.CTkTextbox(
+    logs_page,
+    width=1200,
+    height=600
+)
+logs_box.pack(pady=20)
+load_logs()
+def auto_refresh_logs():
+    load_logs()
+    app.after(
+        5000,
+        auto_refresh_logs
+    )
+auto_refresh_logs()
 leave_btn = ctk.CTkButton(
     sidebar,
     text="🏖 Leave Management",
@@ -763,6 +903,12 @@ def show_visitor_dashboard():
         "SELECT COUNT(*) FROM visitors"
     )
     total_visitors = cursor.fetchone()[0]
+    cursor.execute("""
+    SELECT COUNT(*)
+    FROM visitors
+    WHERE status='Checked-In'
+    """)
+    checked_in = cursor.fetchone()[0]
     conn.close()
     analytics_frame = ctk.CTkFrame(
         visitor_page
@@ -781,6 +927,24 @@ def show_visitor_dashboard():
         side="left",
         padx=10
     )
+    card2 = ctk.CTkFrame(
+        analytics_frame,
+        width=200,
+        height=100
+    )
+    card2.pack(
+        side="left",
+        padx=10
+    )
+    ctk.CTkLabel(
+        card2,
+        text="Checked In"
+    ).pack()
+    ctk.CTkLabel(
+        card2,
+        text=str(checked_in),
+        font=("Arial",30,"bold")
+    ).pack()
     ctk.CTkLabel(
         card,
         text="Total Visitors"
@@ -1230,6 +1394,24 @@ def show_visitor_dashboard():
                 "Registered",
                 photo_path
             ))
+            cursor.execute("""
+            INSERT INTO api_logs
+            (
+                endpoint,
+                employee_name,
+                action,
+                log_time
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                "/visitor/register",
+                visitor_name.get(),
+                "VISITOR_REGISTER",
+                datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            ))
             conn.commit()
             conn.close()
             messagebox.showinfo(
@@ -1341,6 +1523,24 @@ def show_visitor_dashboard():
                                 checkin_time = ?
                             WHERE name = ?
                         """, (current_time, visitor_name))
+                        cursor.execute("""
+                        INSERT INTO api_logs
+                        (
+                            endpoint,
+                            employee_name,
+                            action,
+                            log_time
+                        )
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (
+                            "/visitor/checkin",
+                            visitor_name,
+                            "VISITOR_CHECKIN",
+                            datetime.now().strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                        ))
                         conn.commit()
                         cv2.rectangle(
                             frame,
@@ -1435,6 +1635,24 @@ def show_visitor_dashboard():
                     "Checked-Out",
                     checkout_time,
                     selected_name
+                ))
+                cursor.execute("""
+                INSERT INTO api_logs
+                (
+                    endpoint,
+                    employee_name,
+                    action,
+                    log_time
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    "/visitor/checkout",
+                    selected_name,
+                    "VISITOR_CHECKOUT",
+                    datetime.now().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 ))
                 conn.commit()
                 messagebox.showinfo(
@@ -2253,7 +2471,7 @@ employee_table = ctk.CTkTextbox(
     font=("Consolas", 18)
 )
 employee_table.pack(pady=30)
-def search_employee():
+def search_employee_data():
     keyword = search_entry.get()
     employee_table.configure(state="normal")
     employee_table.delete("1.0", "end")
@@ -2274,10 +2492,10 @@ def search_employee():
     )
     cursor = conn.cursor()
     cursor.execute("""
-    SELECT employee_id, name, department
-    FROM employees
+    SELECT employee_id, employee_name, department
+    FROM biometric_data
     WHERE employee_id LIKE ?
-    OR name LIKE ?
+    OR employee_name LIKE ?
     """, (
         f"%{keyword}%",
         f"%{keyword}%"
@@ -2312,7 +2530,7 @@ search_btn = ctk.CTkButton(
     width=140,
     height=45,
     font=("Arial", 18),
-    command=search_employee
+    command=search_employee_data
 )
 search_btn.grid(
     row=0,
@@ -2566,10 +2784,21 @@ payroll_box.insert(
     "end",
     "1042     Tony           ₹40,000\n"
 )
+conn = sqlite3.connect(
+    "database/chronosface.db"
+)
+cursor = conn.cursor()
+cursor.execute("""
+SELECT
+    employee_id,
+    employee_name
+FROM biometric_data
+""")
+records = cursor.fetchall()
+conn.close()
 employee_options = [
-    "1040 - Ruchitha",
-    "1041 - John",
-    "1042 - Tony"
+    f"{row[0]} - {row[1]}"
+    for row in records
 ]
 employee_dropdown = ctk.CTkComboBox(
     payroll_page,
@@ -2597,10 +2826,10 @@ def create_payslip():
     cursor.execute("""
     SELECT
         employee_id,
-        name,
+        employee_name,
         department,
         salary
-        FROM employees
+        FROM biometric_data
         WHERE employee_id = ?
         """, (employee_id,))
     employee =  cursor.fetchone()
@@ -2749,6 +2978,12 @@ leave_box = ctk.CTkTextbox(
     text_color="white"
 )
 leave_box.pack(pady=20)
+leave_id_entry = ctk.CTkEntry(
+    leave_page,
+    width=250,
+    placeholder_text="Enter Leave ID"
+)
+leave_id_entry.pack(pady=10)
 button_frame = ctk.CTkFrame(
     leave_page,
     fg_color="transparent"
@@ -2802,12 +3037,27 @@ def load_attendance_table():
         records = cursor.fetchall()
         conn.close()
         for row in records:
+            clock_in = row[4] if row[4] else "-"
+            clock_out = row[7] if row[7] else "-"
+            total_break = row[8] if row[8] else "00:00:00"
+            working_hours = row[9] if row[9] else "00:00:00"
+            print(row)
             attendance_box.insert(
                 "end",
-                f"{row[1]:<8}{row[2]:<15}{row[3]:<13}{row[4]:<14}{row[5]:<14}{row[8]:<12}{row[9]}\n"
+                f"{row[1]:<8}"
+                f"{row[2]:<15}"
+                f"{row[3]:<13}"
+                f"{clock_in:<14}"
+                f"{clock_out:<14}"
+                f"{total_break:<12}"
+                f"{working_hours}\n"
             )
         attendance_box.configure(state="disabled")
-load_attendance_table()
+try:
+    load_attendance_table()
+    print("Attendance Loaded")
+except Exception as e:
+    print("Attendance Error:", e)
 def load_reports():
     reports_box.configure(state="normal")
     reports_box.delete("1.0", "end")
@@ -2816,7 +3066,7 @@ def load_reports():
     )
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT COUNT(*) FROM employees"
+        "SELECT COUNT(*) FROM biometric_data"
     )
     total_employees = cursor.fetchone()[0]
     cursor.execute("""
@@ -2868,7 +3118,7 @@ def load_reports():
         "--------------------------------------\n"
     )
     cursor.execute("""
-    SELECT employee_id, name, working_hours
+    SELECT employee_id, employee_name, working_hours
     FROM attendance
     """)
     records = cursor.fetchall()
@@ -2880,13 +3130,29 @@ def load_reports():
     conn.close()
     reports_box.configure(state="disabled")
 load_reports()
+def export_report():
+    path = export_attendance()
+    messagebox.showinfo(
+        "Success",
+        f"Report Saved\n{path}"
+    )
+export_btn = ctk.CTkButton(
+    reports_page,
+    text="Export Attendance CSV",
+    width=250,
+    height=45,
+    command=export_report
+)
+export_btn.pack(
+    pady=10
+)
 def load_dashboard_data():
     conn = sqlite3.connect(
         "database/chronosface.db"
     )
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT COUNT(*) FROM employees"
+        "SELECT COUNT(*) FROM biometric_data"
     )
     total_employees = cursor.fetchone()[0]
     cursor.execute("""
@@ -2906,7 +3172,11 @@ def load_dashboard_data():
         text=str(absent_today)
     )
     conn.close()
-load_dashboard_data()
+try:
+    load_dashboard_data()
+    print("Dashboard Loaded")
+except Exception as e:
+    print("Dashboard Error:", e)
 def load_leave_requests():
     leave_box.configure(state="normal")
     leave_box.delete("1.0", "end")
@@ -2928,10 +3198,11 @@ def load_leave_requests():
     cursor = conn.cursor()
     cursor.execute("""
     SELECT
-        employee_id,
-        name,
-        leave_date,
-        status
+    id,
+    employee_id,
+    employee_name,
+    leave_date,
+    status
     FROM leaves
     """)
     records = cursor.fetchall()
@@ -2939,7 +3210,7 @@ def load_leave_requests():
     for row in records:
         leave_box.insert(
             "end",
-            f"{row[0]:<10}{row[1]:<16}{row[2]:<18}{row[3]}\n"
+            f"{row[0]:<6}{row[1]:<10}{row[2]:<15}{row[3]:<15}{row[4]}"
         )
     leave_box.configure(state="disabled")
 load_leave_requests()
@@ -2948,49 +3219,101 @@ def update_leave_status(status):
         "database/chronosface.db"
     )
     cursor = conn.cursor()
+    leave_id = leave_id_entry.get()
+    if leave_id == "":
+        messagebox.showerror(
+            "Error",
+            "Please Enter Leave ID"
+        )
+        conn.close()
+        return
     cursor.execute("""
     SELECT
         employee_id,
-        name
+        employee_name
     FROM leaves
-    WHERE status = 'Pending'
-    LIMIT 1
-    """)
-    leave_record = cursor.fetchone()
-    if leave_record:
-        employee_id = leave_record[0]
-        employee_name = leave_record[1]
-        cursor.execute("""
-        SELECT email
-        FROM employees
-        WHERE employee_id = ?
-        """, (employee_id,))
-        email_record = cursor.fetchone()
-        if email_record:
-            employee_email = email_record[0]
-            send_email(
-                employee_email,
-                f"Leave {status}",
-                f"""
+    WHERE id=?
+    """,
+    (leave_id,))
+    leave_data = cursor.fetchone()
+    if not leave_data:
+        messagebox.showerror(
+            "Error",
+            "Leave ID Not Found"
+        )
+        conn.close()
+        return
+    employee_id = leave_data[0]
+    employee_name = leave_data[1]
+    cursor.execute("""
+    UPDATE leaves
+    SET status=?
+    WHERE id=?
+    """,
+    (
+        status,
+        leave_id
+    ))
+    print(
+        "ADDING LOG:",
+        employee_name,
+        status
+    )
+    cursor.execute("""
+    INSERT INTO api_logs
+    (
+        endpoint,
+        employee_name,
+        action,
+        log_time
+    )
+    VALUES (?, ?, ?, ?)
+    """,
+    (
+        "/leave/status",
+        employee_name,
+        f"LEAVE_{status.upper()}",
+        datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+    ))
+    cursor.execute("""
+    SELECT email
+    FROM biometric_data
+    WHERE employee_id=?
+    """,
+    (employee_id,)
+    )
+    email_record = cursor.fetchone()
+    if email_record:
+        employee_email = email_record[0]
+        send_email(
+            employee_email,
+            f"Leave {status}",
+            f"""
 Hello {employee_name},
 Your leave request has been {status}.
 Regards,
-ChronosFace Admin
+ChronosFace HR Team
 """
-            )
-    cursor.execute("""
-    UPDATE leaves
-    SET status = ?
-    WHERE status = 'Pending'
-    """, (status,))
+        )
     conn.commit()
-    print("Rows Updated:", cursor.rowcount)
+    print(
+        "Rows Updated:",
+        cursor.rowcount
+    )
     conn.close()
     messagebox.showinfo(
         "Success",
         f"Leave {status} Successfully"
     )
-    leave_box.configure(state="normal")
-load_leave_requests()
+    load_leave_requests()
+try:
+    load_leave_requests()
+    print("Leaves Loaded")
+except Exception as e:
+    print("Leaves Error:", e)
 show_page(dashboard_page)
+load_employee_table()
+auto_refresh_employee_table()
 app.mainloop()

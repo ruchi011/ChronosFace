@@ -1,3 +1,4 @@
+import os
 import customtkinter as ctk
 import subprocess
 import sys
@@ -43,6 +44,12 @@ def login_employee():
             "All Fields Are Required"
         )
         return
+    print("Current Folder:", os.getcwd())
+    print(
+        os.path.abspath(
+            "database/chronosface.db"
+        )
+    )
     conn = sqlite3.connect(
         "database/chronosface.db"
     )

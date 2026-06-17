@@ -1,8 +1,11 @@
+from urllib import response
+
 import customtkinter as ctk
 from tkinter import messagebox
 import sqlite3
 import subprocess
 import sys
+import requests
 def save_employee():
     name = name_entry.get()
     employee_id = id_entry.get()
@@ -14,34 +17,30 @@ def save_employee():
             "Fill all required fields"
         )
         return
-    conn = sqlite3.connect(
-        "database/chronosface.db"
-    )
-    cursor = conn.cursor()
     try:
-        cursor.execute(
-            """
-            INSERT INTO employees
-            (name, employee_id, department, email)
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                name,
-                employee_id,
-                department,
-                email
+        response = requests.post(
+            "http://127.0.0.1:5000/api/biometric/register",
+            json={
+                "employeeId": employee_id,
+                "employeeName": name,
+                "department": department,
+                "email": email,
+                "phone": "9876543210",
+                "faceEmbedding": [0.12, 0.34, 0.56]
+            }
+        )
+        print("STATUS:", response.status_code)
+        print("RESPONSE:", response.text)  
+        if response.status_code == 200:
+            messagebox.showinfo(
+                "Success",
+                "Employee Added Through Server"
             )
-        )
-        conn.commit()
-        messagebox.showinfo(
-            "Success",
-            "Employee Added Successfully"
-        )
-        subprocess.Popen(
-            [
-                sys.executable,
-                "capture_dataset.py",
-                name
+            subprocess.Popen(
+                [
+                    sys.executable,
+                    "capture_dataset.py",
+                    name
                 ]
             )
     except Exception as e:
@@ -49,7 +48,7 @@ def save_employee():
             "Error",
             str(e)
         )
-    conn.close()
+    
 app = ctk.CTk()
 app.geometry("500x600")
 app.title("Add Employee")

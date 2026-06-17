@@ -1,12 +1,12 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-SENDER_EMAIL = "madichettysairuchita@gmail.com"
-SENDER_PASSWORD = "ruchi@11"
+sender_email = "yourgmail@gmail.com"
+sender_password = "YOUR_16_CHARACTER_APP_PASSWORD"
 def send_email(receiver_email, subject, body):
     try:
         msg = MIMEMultipart()
-        msg["From"] = SENDER_EMAIL
+        msg["From"] = sender_email
         msg["To"] = receiver_email
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
@@ -16,11 +16,11 @@ def send_email(receiver_email, subject, body):
         )
         server.starttls()
         server.login(
-            SENDER_EMAIL,
-            SENDER_PASSWORD
+            sender_email,
+            sender_password
         )
         server.sendmail(
-            SENDER_EMAIL,
+            sender_email,
             receiver_email,
             msg.as_string()
         )

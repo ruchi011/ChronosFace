@@ -91,7 +91,8 @@ def open_change_password(employee_id):
                 UPDATE admins
                 SET password = ?
                 WHERE username = ?
-                """, (
+                """,
+                (
                     new_password,
                     "admin"
                 ))
@@ -99,6 +100,37 @@ def open_change_password(employee_id):
                 messagebox.showinfo(
                     "Success",
                     "Admin Password Changed Successfully"
+                )
+                window.destroy()
+            else:
+                messagebox.showerror(
+                    "Error",
+                    "Old Password Incorrect"
+                )
+        elif employee_id == "hr":
+            cursor.execute("""
+            SELECT password
+            FROM hr
+            WHERE username = ?
+            """, ("hr",))
+            current_password = cursor.fetchone()
+            if (
+                current_password and
+                current_password[0] == old_password
+            ):
+                cursor.execute("""
+                UPDATE hr
+                SET password = ?
+                WHERE username = ?
+                """,
+                (
+                    new_password,
+                    "hr"
+                ))
+                conn.commit()
+                messagebox.showinfo(
+                    "Success",
+                    "HR Password Changed Successfully"
                 )
                 window.destroy()
             else:
@@ -121,7 +153,8 @@ def open_change_password(employee_id):
                 UPDATE employees
                 SET password = ?
                 WHERE employee_id = ?
-                """, (
+                """,
+                (
                     new_password,
                     employee_id
                 ))
@@ -133,10 +166,10 @@ def open_change_password(employee_id):
                 window.destroy()
             else:
                 messagebox.showerror(
-                        "Error",
-                        "Old Password Incorrect"
-                    )
-                conn.close()
+                    "Error",
+                    "Old Password Incorrect"
+                )
+        conn.close()
     save_btn = ctk.CTkButton(
         window,
         text="Update Password",

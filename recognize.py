@@ -11,7 +11,7 @@ import math
 from email_utils import send_email
 import numpy as np
 import random
-
+import requests
 marked_names = set()
 last_email_time = 0
 previous_face_area = 0
@@ -366,6 +366,16 @@ def recognize_faces():
                             )
             detection_start = time.time()
             faces = app.get(frame)
+            for face in faces:
+                bbox = face.bbox.astype(int)
+                x1, y1, x2, y2 = bbox
+                cv2.rectangle(
+                    frame,
+                    (x1, y1),
+                    (x2, y2),
+                    (0, 255, 0),
+                    2
+                )
             detection_end = time.time()
             detection_time = (
                 detection_end -
@@ -466,10 +476,9 @@ def recognize_faces():
                     )
 
                     cv2.imwrite(
-                        image_path,
-                        frame
+                        frame=image_path,
+                        img=frame
                     )
-
                     print(
                         "Unknown Face Saved:",
                         image_path
@@ -511,10 +520,19 @@ def recognize_faces():
                         not spoof_detected and
                         recognition_counter[best_match] >= 15
                     ):
-                        mark_attendance(best_match)
-                        print(
-                            f"Attendance Marked for {best_match}"
+                        response = requests.post(
+                            "http://127.0.0.1:5000/api/biometric/verify",
+                            json={
+                                "employeeName": best_match
+                            }
                         )
+                        result = response.json()
+                        print(result)
+                        if result.get("status") == "verified":
+                            mark_attendance(best_match)
+                            print(
+                                f"Attendance Marked for {best_match}"
+                            )
                         time.sleep(2)
                         cap.release()
                         cv2.destroyAllWindows()

@@ -69,6 +69,16 @@ VALUES (?, ?)
     "admin",
     "admin123"
 ))
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS biometric_data (
+    employee_id TEXT PRIMARY KEY,
+    employee_name TEXT,
+    department TEXT,
+    email TEXT,
+    phone TEXT,
+    face_embedding TEXT
+)
+""")
 conn.commit()
 conn.close()
 print("Database Created Successfully")
