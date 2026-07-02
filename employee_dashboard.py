@@ -90,26 +90,26 @@ conn = sqlite3.connect(
 )
 cursor = conn.cursor()
 cursor.execute("""
-SELECT employee_name, department, email
+SELECT name, department, email
 FROM biometric_data
 WHERE employee_id = ?
 """, (employee_id,))
 employee = cursor.fetchone()
 conn.close()
 if employee:
-    employee_name = employee[0]
+    name = employee[0]
     department = employee[1]
     email = employee[2]
 else:
-    employee_name = "Unknown"
+    name = "Unknown"
     department = "Unknown"
     email = "Unknown"
 photo_path = None
 dataset_path = "dataset"
-if employee_name != "Unknown":
+if name != "Unknown":
     employee_folder = os.path.join(
         dataset_path,
-        employee_name
+        name
     )
     if os.path.exists(employee_folder):
         images = os.listdir(employee_folder)
@@ -142,7 +142,7 @@ if photo_path:
     )
 welcome_label = ctk.CTkLabel(
     info_frame,
-    text=f"Welcome, {employee_name}",
+    text=f"Welcome, {name}",
     font=("Arial", 34, "bold")
 )
 welcome_label.pack(
@@ -166,7 +166,7 @@ attendance_btn_frame.pack(pady=20)
 def clock_in():
     data = {
         "employeeId": employee_id,
-        "employeeName": employee_name,
+        "employeeName": name,
         "date": datetime.now().strftime("%Y-%m-%d"),
         "clockIn": datetime.now().strftime("%H:%M:%S")
     }
@@ -174,7 +174,6 @@ def clock_in():
         "http://127.0.0.1:5000/api/attendance/clockin",
         json=data
     )
-    print("Showing popup now...")
     if response.status_code == 200:
         app.focus_force()
         app.lift()
@@ -191,33 +190,48 @@ def clock_in():
 
     else:
         messagebox.showerror(
-            "Error",
-            "Clock In Failed"
+            parent=app,
+            title="Error",
+            message="Clock In Failed"
         )
 def start_break():
-    data = {
-        "employeeId": employee_id
-    }
-    response = requests.post(
-        "http://127.0.0.1:5000/api/attendance/startbreak",
-        json=data
-    )
-    if response.status_code == 200:
-        app.focus_force()
-        app.lift()
-        app.after(
-            100,
-            lambda: messagebox.showinfo(
-                "Success",
-                "Break Started"
-            )
+    try:
+        data = {
+            "employeeId": employee_id
+        }
+
+        response = requests.post(
+            "http://127.0.0.1:5000/api/attendance/startbreak",
+            json=data,
+            timeout=5
         )
-        load_attendance()
-        load_today_status()
+
+        if response.status_code == 200:
+            messagebox.showinfo(
+                parent=app,
+                title="Success",
+                message="Break Started Successfully"
+            )
+            load_attendance()
+            load_today_status()
+
+        else:
+            messagebox.showerror(
+                parent=app,
+                title="Error",
+                message="Failed to Start Break"
+            )
+
+    except requests.exceptions.ConnectionError:
+        messagebox.showerror(
+            parent=app,
+            title="Server Error",
+            message="Attendance Server is not running.\nStart biometric_api.py first."
+        )
 def end_break():
     data = {
         "employeeId": employee_id,
-        "employeeName": employee_name   
+        "employeeName": name   
     }
     response = requests.post(
         "http://127.0.0.1:5000/api/attendance/endbreak",
@@ -229,22 +243,23 @@ def end_break():
         app.after(
             100,
             lambda: messagebox.showinfo(
-                "Success",
-                "Break Ended"
+                parent=app,
+                title="Success",
+                message="Break Ended Successfully"
             )
         )
         load_attendance()
         load_today_status()
     else:
         messagebox.showerror(
-            "Error",
-            "Failed to End Break"
+            parent=app,
+            title="Error",
+            message="Failed to End Break"
         )
 def clock_out():
-    print("CLOCK OUT BUTTON CLICKED")
     data = {
         "employeeId": employee_id,
-        "employeeName": employee_name
+        "employeeName": name
     }
     response = requests.post(
         "http://127.0.0.1:5000/api/attendance/clockout",
@@ -256,16 +271,18 @@ def clock_out():
         app.after(
             100,
             lambda: messagebox.showinfo(
-                "Success",
-                "Clock Out Successful"
+                parent=app,
+                title="Success",
+                message="Clock Out Successful"
             )
         )
         load_attendance()
         load_today_status()
     else:
         messagebox.showerror(
-            "Error",
-            "Clock Out Failed"
+            parent=app,
+            title="Error",
+            message="Clock Out Failed"
         )
         
 clockin_btn = ctk.CTkButton(
@@ -609,7 +626,6 @@ def apply_leave():
     )
     reason_box.pack(pady=20)
     def submit_leave():
-        print("SUBMIT BUTTON CLICKED")
         leave_date = date_entry.get().strip()
         reason = reason_box.get("1.0", "end").strip()
         conn = sqlite3.connect(
@@ -619,7 +635,7 @@ def apply_leave():
         cursor.execute("""
         INSERT INTO leaves (
             employee_id,
-            employee_name,
+            name,
             leave_date,
             reason,
             status
@@ -627,7 +643,7 @@ def apply_leave():
         VALUES (?, ?, ?, ?, ?)
         """, (
             employee_id,
-            employee_name,
+            name,
             leave_date,
             reason,
             "Pending"
@@ -636,21 +652,20 @@ def apply_leave():
         INSERT INTO api_logs
         (
             endpoint,
-            employee_name,
+            name,
             action,
             log_time
         )
         VALUES (?, ?, ?, ?)
         """, (
             "/leave/apply",
-            employee_name,
+            name,
             "APPLY_LEAVE",
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ))
         conn.commit()
         conn.close()
         load_leave_history()
-        print("LEAVE SAVED")
         leave_window.lift()
         leave_window.focus_force()
         messagebox.showinfo(
@@ -810,15 +825,17 @@ def check_leave_status():
         if status == "Approved":
 
             messagebox.showinfo(
-                "Leave Approved",
-                f"Your leave for {leave_date} is Approved"
+                parent=app,
+                title="Leave Approved",
+                message=f"Your leave for {leave_date} is Approved"
             )
 
         elif status == "Rejected":
 
             messagebox.showerror(
-                "Leave Rejected",
-                f"Your leave for {leave_date} is Rejected"
+                parent=app,
+                title="Leave Rejected",
+                message=f"Your leave for {leave_date} is Rejected"
             )
 logout_btn = ctk.CTkButton(
     main_frame,

@@ -54,7 +54,7 @@ app.geometry("500x600")
 app.title("Add Employee")
 title = ctk.CTkLabel(
     app,
-    text="Add Employee",
+    text="+ Add Employee",
     font=("Arial", 30, "bold")
 )
 title.pack(pady=20)

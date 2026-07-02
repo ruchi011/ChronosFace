@@ -27,7 +27,7 @@ def load_hr_employees():
             employees_box.insert(
                 "end",
                 f"{emp['employee_id']}    "
-                f"{emp['employee_name']}    "
+                f"{emp['name']}    "
                 f"{emp['department']}\n"
             )
     except Exception as e:
@@ -36,11 +36,12 @@ def load_hr_employees():
             f"Error: {e}"
         )
 def auto_refresh_hr():
-    load_hr_employees()
-    app.after(
-        3000,
-        auto_refresh_hr
-    )
+    try:
+        load_hr_employees()
+        if app.winfo_exists():
+            app.after(3000, auto_refresh_hr)
+    except:
+        pass
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 app = ctk.CTk()
@@ -376,10 +377,14 @@ attendance_search = ctk.CTkEntry(
 )
 attendance_search.pack(pady=10)
 keyword = attendance_search.get()
+conn = sqlite3.connect(
+    "database/chronosface.db"
+)
+cursor = conn.cursor()
 cursor.execute("""
 SELECT
 employee_id,
-employee_name
+name
 FROM attendance
 WHERE date=?
 AND name LIKE ?
@@ -420,7 +425,7 @@ def load_attendance_data():
     cursor.execute("""
     SELECT
     employee_id,
-    employee_name
+    name
     FROM attendance
     WHERE date=?
     """,
@@ -537,7 +542,7 @@ def load_reports():
     cursor.execute("""
     SELECT
     employee_id,
-    employee_name
+    name
     FROM biometric_data
     """)
 
@@ -615,7 +620,7 @@ def load_pending_leaves():
     SELECT
     id,
     employee_id,
-    employee_name,
+    name,
     leave_date,
     reason,
     status
@@ -657,7 +662,7 @@ def approve_leave():
         INSERT INTO api_logs
         (
             endpoint,
-            employee_name,
+            name,
             action,
             log_time
         )
@@ -712,7 +717,7 @@ def reject_leave():
         INSERT INTO api_logs
         (
             endpoint,
-            employee_name,
+            name,
             action,
             log_time
         )
@@ -809,7 +814,7 @@ def create_payslip():
     cursor = conn.cursor()
     cursor.execute("""
     SELECT
-        employee_name,
+        name,
         department
     FROM biometric_data
     WHERE employee_id=?
@@ -819,11 +824,11 @@ def create_payslip():
     employee = cursor.fetchone()
     conn.close()
     if employee:
-        employee_name = employee[0]
+        name = employee[0]
         department = employee[1]
         file_path = generate_payslip(
             employee_id,
-            employee_name,
+            name,
             department,
             50000
         )
@@ -924,5 +929,17 @@ password_btn = ctk.CTkButton(
 )
 password_btn.pack(pady=20)
 show_page(dashboard_page)
-auto_refresh_hr()
+refresh_id = app.after(
+    3000,
+    auto_refresh_hr
+)
+def on_closing():
+    try:
+        app.destroy()
+    except:
+        pass
+app.protocol(
+    "WM_DELETE_WINDOW",
+    on_closing
+)
 app.mainloop()

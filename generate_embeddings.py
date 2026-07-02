@@ -7,10 +7,10 @@ app = FaceAnalysis(name="buffalo_l")
 app.prepare(ctx_id=0)
 dataset_path = "dataset"
 employee_embeddings = {}
-for employee_name in os.listdir(dataset_path):
+for name in os.listdir(dataset_path):
     employee_folder = os.path.join(
         dataset_path,
-        employee_name
+        name
     )
     embeddings_list = []
     for image_name in os.listdir(employee_folder):
@@ -28,7 +28,7 @@ for employee_name in os.listdir(dataset_path):
             embeddings_list,
             axis=0
         )
-        employee_embeddings[employee_name] = average_embedding
+        employee_embeddings[name] = average_embedding
 with open("embeddings/face_embeddings.pkl", "wb") as f:
     pickle.dump(employee_embeddings, f)
 print("Embeddings Generated Successfully!")

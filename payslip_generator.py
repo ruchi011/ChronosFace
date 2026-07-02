@@ -9,7 +9,7 @@ import os
 import sqlite3
 def generate_payslip(
     employee_id,
-    employee_name,
+    name,
     department,
     salary
 ):
@@ -76,7 +76,7 @@ def generate_payslip(
     employee_info = Paragraph(
         f"""
         Employee ID: {employee_id}<br/>
-        Employee Name: {employee_name}<br/>
+        Employee Name: {name}<br/>
         Department: {department}<br/>
         Basic Salary: ₹{salary}<br/>
         Present Days: {present_days}<br/>

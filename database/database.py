@@ -72,11 +72,49 @@ VALUES (?, ?)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS biometric_data (
     employee_id TEXT PRIMARY KEY,
-    employee_name TEXT,
+    name TEXT,
     department TEXT,
     email TEXT,
     phone TEXT,
     face_embedding TEXT
+)
+""")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS settings(
+    id INTEGER PRIMARY KEY,
+    admin_password TEXT,
+    hr_password TEXT,
+    camera_index INTEGER,
+    recognition_threshold REAL,
+    ear_threshold REAL
+)
+""")
+cursor.execute("""
+INSERT OR IGNORE INTO settings
+VALUES(
+    1,
+    'admin123',
+    'hr123',
+    0,
+    0.6,
+    0.25
+)
+""")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS visitors(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visitor_name TEXT,
+    purpose TEXT,
+    date TEXT,
+    time TEXT
+)
+""")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS strangers(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    image_path TEXT,
+    date TEXT,
+    time TEXT
 )
 """)
 conn.commit()

@@ -1,3 +1,4 @@
+from click import confirm
 import customtkinter as ctk
 import sqlite3
 import subprocess
@@ -28,7 +29,7 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 app = ctk.CTk()
 app.title("ChronosFace Admin Dashboard")
-app.geometry("1500x850")    
+app.geometry("1500x950")
 conn = sqlite3.connect(
     "database/chronosface.db"
 )
@@ -37,7 +38,7 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS leaves (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     employee_id TEXT,
-    employee_name TEXT,
+    name TEXT,
     leave_date TEXT,
     reason TEXT,
     status TEXT
@@ -80,7 +81,7 @@ conn.commit()
 conn.close()
 sidebar = ctk.CTkFrame( 
     app,
-    width=220,
+    width=200,
     fg_color="#111827",
     corner_radius=12
 )
@@ -88,15 +89,18 @@ sidebar.pack(
     side="left",
     fill="y"
 )
+sidebar.pack_propagate(False)
 logo = ctk.CTkLabel(
     sidebar,
     text="ChronosFace",
-    font=("Arial", 34, "bold")
+    font=("Segoe UI",34,"bold"),
+    text_color="white"
 )
 logo.pack(pady=35)
 main_frame = ctk.CTkFrame(
     app,
-    fg_color="#1e1e1e"
+    fg_color="#1f1f1f",
+    corner_radius=0
 )
 main_frame.pack(
     side="right",
@@ -137,47 +141,103 @@ for frame in (
 def show_page(page):
     page.tkraise()
 def load_employee_table():
-    employee_table.configure(state="normal")
-    employee_table.delete(
-        "1.0",
-        "end"
-    )
-    employee_table.insert(
-        "end",
-        "Employee Database\n\n"
-    )
-    employee_table.insert(
-        "end",
-        "ID       Name           Department\n"
-    )
-    employee_table.insert(
-        "end",
-        "--------------------------------------\n"
-    )
+
+    for widget in table_container.winfo_children():
+        widget.destroy()
+
+    headers = [
+        "ID",
+        "Name",
+        "Department",
+        "Email",
+        "Operations"
+    ]
+
+    for col, header in enumerate(headers):
+
+        ctk.CTkLabel(
+            table_container,
+            text=header,
+            font=("Segoe UI",22,"bold")
+        ).grid(
+            row=0,
+            column=col,
+            padx=40,
+            pady=15,
+            sticky="w"
+        )
+
     conn = sqlite3.connect(
         "database/chronosface.db"
     )
+
     cursor = conn.cursor()
-    keyword = search_employee_data.get()
+
     cursor.execute("""
     SELECT
         employee_id,
         employee_name,
-        department
+        department,
+        email
     FROM biometric_data
-    WHERE employee_name LIKE ?
-    """,
-    (
-        f"%{keyword}%",
-    ))
+    ORDER BY employee_id
+    """)
+
     employees = cursor.fetchall()
+
     conn.close()
-    for emp in employees:
-        employee_table.insert(
-            "end",
-            f"{emp[0]:<10}{emp[1]:<18}{emp[2]}\n"
+
+    for row, emp in enumerate(
+        employees,
+        start=1
+    ):
+
+        ctk.CTkLabel(
+            table_container,
+            text=emp[0]
+        ).grid(row=row,column=0,padx=20,pady=10)
+
+        ctk.CTkLabel(
+            table_container,
+            text=emp[1]
+        ).grid(row=row,column=1,padx=20,pady=10)
+
+        ctk.CTkLabel(
+            table_container,
+            text=emp[2]
+        ).grid(row=row,column=2,padx=20,pady=10)
+
+        ctk.CTkLabel(
+            table_container,
+            text=emp[3]
+        ).grid(row=row,column=3,padx=20,pady=10)
+
+        edit_btn = ctk.CTkButton(
+            table_container,
+            text="✎",
+            width=45,
+            height=40,
+            fg_color="#2563eb",
+            command=lambda emp_id=emp[0]: open_modify_employee(emp_id)
         )
-    employee_table.configure(state="disabled")
+        edit_btn.grid(
+            row=row,
+            column=4,
+            padx=5
+        )
+        delete_btn = ctk.CTkButton(
+            table_container,
+            text="🗑",
+            width=45,
+            height=40,
+            fg_color="#dc2626",
+            command=lambda emp_id=emp[0]: admin_delete_login(emp_id)
+        )
+        delete_btn.grid(
+            row=row,
+            column=5,
+            padx=5
+        )
 def auto_refresh_employee_table():
     load_employee_table()
     app.after(
@@ -194,41 +254,41 @@ def open_add_employee():
     add_window.geometry("500x600")
     title = ctk.CTkLabel(
         add_window,
-        text="Add Employee",
+        text="+ Add Employee",
         font=("Arial", 32, "bold")
     )
     title.pack(pady=30)
     emp_id = ctk.CTkEntry(
         add_window,
-        width=350,
-        height=45,
+        width=450,
+        height=50,
         placeholder_text="Employee ID"
     )
     emp_id.pack(pady=15)
     emp_name = ctk.CTkEntry(
         add_window,
-        width=350,
-        height=45,
+        width=450,
+        height=50,
         placeholder_text="Employee Name"
     )
     emp_name.pack(pady=15)
     emp_dept = ctk.CTkEntry(
         add_window,
-        width=350,
-        height=45,
+        width=450,
+        height=50,
         placeholder_text="Department"
     )
     emp_dept.pack(pady=15)
     emp_email = ctk.CTkEntry(
         add_window,
-        width=350,
-        height=45,
+        width=450,
+        height=50,
         placeholder_text="Email"
     )
     emp_email.pack(pady=15)
     def save_employee():
         employee_id = emp_id.get()
-        employee_name = emp_name.get()
+        name = emp_name.get()
         department = emp_dept.get()
         email = emp_email.get()
         try:
@@ -238,7 +298,7 @@ def open_add_employee():
                 "http://127.0.0.1:5000/api/biometric/register",
                 json={
                     "employeeId": employee_id,
-                    "employeeName": employee_name,
+                    "employeeName": name,
                     "department": department,
                     "email": email,
                     "phone": "9876543210",
@@ -252,7 +312,7 @@ def open_add_employee():
                     [
                         sys.executable,
                         "capture_dataset.py",
-                        employee_name
+                        name
                     ]
                 )
                 subprocess.run(
@@ -286,7 +346,8 @@ def open_add_employee():
         command=save_employee
     )
     save_btn.pack(pady=40)
-def open_modify_employee():
+def open_modify_employee(emp_id):
+    selected_employee_id = emp_id
     global modify_window
     modify_window = ctk.CTkToplevel(app)
     modify_window.focus()
@@ -300,36 +361,28 @@ def open_modify_employee():
         font=("Arial", 32, "bold")
     )
     title.pack(pady=30)
-    search_id = ctk.CTkEntry(
-        modify_window,
-        width=350,
-        height=45,
-        placeholder_text="Enter Employee ID"
-    )
-    search_id.pack(pady=15)
     emp_name = ctk.CTkEntry(
         modify_window,
-        width=350,
-        height=45,
+        width=450,
+        height=50,
         placeholder_text="Employee Name"
     )
     emp_name.pack(pady=15)
     emp_dept = ctk.CTkEntry(
         modify_window,
-        width=350,
-        height=45,
+        width=450,
+        height=50,
         placeholder_text="Department"
     )
     emp_dept.pack(pady=15)
     emp_email = ctk.CTkEntry(
         modify_window,
-        width=350,
-        height=45,
+        width=450,
+        height=50,
         placeholder_text="Email"
     )
     emp_email.pack(pady=15)
     def load_employee():
-        employee_id = search_id.get()
         conn = sqlite3.connect(
             "database/chronosface.db"
         )
@@ -342,7 +395,7 @@ def open_modify_employee():
             email
         FROM biometric_data
         WHERE employee_id = ?
-        """, (employee_id,))
+        """, (selected_employee_id,))
         employee = cursor.fetchone()
         conn.close()
         if employee:
@@ -355,7 +408,6 @@ def open_modify_employee():
         else:
             print("Employee Not Found")
     def update_employee():
-        employee_id = search_id.get()
         updated_name = emp_name.get()
         updated_department = emp_dept.get()
         updated_email = emp_email.get()
@@ -374,7 +426,7 @@ def open_modify_employee():
             updated_name,
             updated_department,
             updated_email,
-            employee_id
+            emp_id
         ))
         cursor.execute("""
         INSERT INTO api_logs
@@ -385,20 +437,17 @@ def open_modify_employee():
             log_time
         )
         VALUES (?, ?, ?, ?)
-        """,
-        (
+        """, (
             "/admin/update",
             updated_name,
             "UPDATE_EMPLOYEE",
-            datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ))
+
         conn.commit()
-        print(cursor.rowcount)
-        conn.close()
         print("Employee Updated Successfully")
         load_employee_table()
+        conn.close()
         modify_window.destroy()
     load_btn = ctk.CTkButton(
         modify_window,
@@ -418,7 +467,8 @@ def open_modify_employee():
         command=update_employee
     )
     update_btn.pack(pady=30)
-def admin_delete_login():
+    load_employee()
+def admin_delete_login(emp_id):
     global login_window
     login_window = ctk.CTkToplevel(app)
     login_window.focus()
@@ -472,7 +522,7 @@ def admin_delete_login():
                 "Admin Verified"
             )
             login_window.destroy()
-            open_delete_employee()
+            open_delete_employee(emp_id)
         else:
             messagebox.showerror(
                 "Error",
@@ -487,79 +537,70 @@ def admin_delete_login():
         command=verify_admin
     )
     verify_btn.pack(pady=35)
-def open_delete_employee():
-    global delete_window
-    delete_window = ctk.CTkToplevel(app)
-    delete_window.focus()
-    delete_window.grab_set()
-    delete_window.lift()
-    delete_window.title("Delete Employee")
-    delete_window.geometry("500x400")
-    title = ctk.CTkLabel(
-        delete_window,
-        text="Delete Employee",
-        font=("Arial", 32, "bold")
+def open_delete_employee(emp_id):
+
+    conn = sqlite3.connect(
+        "database/chronosface.db"
     )
-    title.pack(pady=30)
-    emp_id = ctk.CTkEntry(
-        delete_window,
-        width=350,
-        height=45,
-        placeholder_text="Enter Employee ID"
-    )
-    emp_id.pack(pady=25)
-    def delete_employee():
-        employee_id = emp_id.get().strip()
-        conn = sqlite3.connect(
-            "database/chronosface.db"
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT employee_name
+    FROM biometric_data
+    WHERE employee_id = ?
+    """, (emp_id,))
+
+    employee = cursor.fetchone()
+    print(employee)
+    if not employee:
+        messagebox.showerror(
+            "Error",
+            "Employee Not Found"
         )
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT employee_name
-        FROM biometric_data
-        WHERE employee_id = ?
-        """, (employee_id,))
-        employee = cursor.fetchone()
-        if employee:
-            employee_name = employee[0]
-            cursor.execute("""
-            DELETE FROM biometric_data
-            WHERE employee_id = ?
-            """, (employee_id,))
-            cursor.execute("""
-            INSERT INTO api_logs
-            (endpoint, employee_name, action, log_time)
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                "/admin/delete",
-                employee_name,
-                "DELETE",
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ))
-            conn.commit()   
-            conn.close()
-            messagebox.showinfo(
-                "Success",
-                "Employee Deleted Successfully"
-            )
-            delete_window.destroy()
-        else:
-            messagebox.showerror(
-                "Error",
-                "Employee Not Found"
-            )
-    delete_btn = ctk.CTkButton(
-        delete_window,
-        text="Delete Employee",
-        width=200,
-        height=50,
-        font=("Arial", 18),
-        fg_color="red",
-        hover_color="darkred",
-        command=delete_employee
+        conn.close()
+        return
+    employee_name = employee[0]
+    confirm = messagebox.askyesno(
+        "Confirm Delete",
+        f"Delete employee:\n\n{employee_name} ({emp_id}) ?"
     )
-    delete_btn.pack(pady=35)
+    if not confirm:
+        conn.close()
+        return
+    cursor.execute("""
+    DELETE FROM biometric_data
+    WHERE employee_id = ?
+    """, (emp_id,))
+
+    cursor.execute("""
+    INSERT INTO api_logs
+    (
+        endpoint,
+        employee_name,
+        action,
+        log_time
+    )
+    VALUES (?, ?, ?, ?)
+    """,
+    (
+        "/admin/delete",
+        employee_name,
+        "DELETE_EMPLOYEE",
+        datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+    ))
+
+    conn.commit()
+    conn.close()
+
+    load_employee_table()
+
+    messagebox.showinfo(
+        "Success",
+        "Employee Deleted Successfully"
+    )   
 def open_change_photo():
     change_window = ctk.CTkToplevel(app)
     change_window.title("Change Employee Photo")
@@ -593,7 +634,7 @@ def open_change_photo():
         employee = cursor.fetchone()
         conn.close()
         if employee:
-            employee_name = employee[0]
+            name = employee[0]
             file_path = filedialog.askopenfilename(
                 title="Select Employee Photo",
                 filetypes=[
@@ -601,7 +642,7 @@ def open_change_photo():
                 ]
             )
             if file_path:
-                dataset_path = f"dataset/{employee_name}"
+                dataset_path = f"dataset/{name}"
                 if os.path.exists(dataset_path):
                     shutil.rmtree(dataset_path)
                 os.makedirs(dataset_path)
@@ -630,7 +671,7 @@ def open_change_photo():
                 """,
                 (
                     "/admin/photo",
-                    employee_name,
+                    name,
                     "PHOTO_UPDATED",
                     datetime.now().strftime(
                         "%Y-%m-%d %H:%M:%S"
@@ -663,30 +704,36 @@ def open_change_photo():
 dashboard_btn = ctk.CTkButton(
     sidebar,
     text="📊 Dashboard",
-    width=220,
-    height=45,
-    font=("Arial", 18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda: show_page(dashboard_page)
 )
-dashboard_btn.pack(pady=12)
+dashboard_btn.pack(pady=8, padx=18)
 employees_btn = ctk.CTkButton(
     sidebar,
     text="👥 Employees",
-    width=220,
-    height=45,
-    font=("Arial", 18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda: show_page(employees_page)
 )
-employees_btn.pack(pady=12)
+employees_btn.pack(pady=6, padx=18)
 attendance_btn = ctk.CTkButton(
     sidebar,
     text="Attendance",
-    width=220,
-    height=45,
-    font=("Arial", 18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda: show_page(attendance_page)
 )
-attendance_btn.pack(pady=12)
+attendance_btn.pack(pady=6, padx=18)
 def show_groups():
     show_page(groups_page)
     for widget in groups_page.winfo_children():
@@ -766,7 +813,7 @@ def show_groups():
         SELECT employee_id, employee_name
         FROM biometric_data
         WHERE department = ?
-        ORDER BY name
+        ORDER BY employee_name
         """, (department_name,))
         employees = cursor.fetchall()
         for emp in employees:
@@ -787,34 +834,39 @@ def show_groups():
 groups_btn = ctk.CTkButton(
     sidebar,
     text="👥 Groups",
-    width=220,
+    width=240,
     height=55,
-    font=("Arial", 20),
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     fg_color="#7c3aed",
     hover_color="#6d28d9",
-    corner_radius=12,
     command=show_groups
 )
-groups_btn.pack(pady=12)
+groups_btn.pack(pady=6, padx=18)
 reports_btn = ctk.CTkButton(
     sidebar,
     text="📄 Reports",
-    width=220,
-    height=45,
-    font=("Arial", 18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda: show_page(reports_page)
 )
-reports_btn.pack(pady=12)
+reports_btn.pack(pady=6, padx=18)
 logs_btn = ctk.CTkButton(
     sidebar,
     text="📜 Logs",
-    width=220,
-    height=45,
-    font=("Arial",18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda:
         show_page(logs_page)
 )
-logs_btn.pack(pady=12)
+logs_btn.pack(pady=6, padx=18)
 def load_logs():
     logs_box.delete(
         "1.0",
@@ -850,39 +902,46 @@ logs_box = ctk.CTkTextbox(
 logs_box.pack(pady=20)
 load_logs()
 def auto_refresh_logs():
-    load_logs()
-    app.after(
-        5000,
-        auto_refresh_logs
-    )
+    try:
+        load_logs()
+        if app.winfo_exists():
+            app.after(5000, auto_refresh_logs)
+    except:
+        pass
 auto_refresh_logs()
 leave_btn = ctk.CTkButton(
     sidebar,
     text="🏖 Leave Management",
-    width=220,
-    height=45,
-    font=("Arial", 18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda: show_page(leave_page)
 )
-leave_btn.pack(pady=12)
+leave_btn.pack(pady=6, padx=18)
 settings_btn = ctk.CTkButton(
     sidebar,
     text="⚙ Settings",
-    width=220,
-    height=45,
-    font=("Arial", 18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda: show_page(settings_page)
 )
-settings_btn.pack(pady=12)
+settings_btn.pack(pady=6, padx=18)
 payroll_btn = ctk.CTkButton(
     sidebar,
     text="💰 Payroll",
-    width=220,
-    height=45,
-    font=("Arial", 18),
+    width=240,
+    height=55,
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
+    anchor="w",
     command=lambda: show_page(payroll_page)
 )
-payroll_btn.pack(pady=12)
+payroll_btn.pack(pady=6, padx=18)
 def show_visitor_dashboard():
     show_page(visitor_page)
     for widget in visitor_page.winfo_children():
@@ -1040,8 +1099,8 @@ def show_visitor_dashboard():
         ).pack(pady=10)
         search_entry = ctk.CTkEntry(
             content_frame,
-            width=350,
-            height=40,
+            width=450,
+            height=50,
             placeholder_text="Search Visitor"
         )
         search_entry.pack(pady=10)
@@ -1251,13 +1310,13 @@ def show_visitor_dashboard():
         """)
         employees = cursor.fetchall()
         conn.close()
-        employee_names = [
+        name = [
             emp[0]
             for emp in employees
         ]
         host_dropdown = ctk.CTkComboBox(
             form_frame,
-            values=employee_names,
+            values=name,
             width=400,
             height=45
         )
@@ -1422,8 +1481,8 @@ def show_visitor_dashboard():
         register_btn = ctk.CTkButton(
             form_frame,
             text="✅ Register Visitor",
-            width=350,
-            height=55,
+            width=450,
+            height=50,
             font=("Arial", 20, "bold"),
             fg_color="#15803d",
             hover_color="#166534",
@@ -1521,7 +1580,7 @@ def show_visitor_dashboard():
                             SET
                                 status = 'Checked-In',
                                 checkin_time = ?
-                            WHERE name = ?
+                            WHERE employee_name = ?
                         """, (current_time, visitor_name))
                         cursor.execute("""
                         INSERT INTO api_logs
@@ -2107,15 +2166,15 @@ def show_visitor_dashboard():
 visitor_btn = ctk.CTkButton(
     sidebar,
     text="🧑 Visitor Management",
-    width=220,
-    height=45,
+    width=240,
+    height=55,
     corner_radius=12,
-    font=("Segoe UI", 18, "bold"),
+    font=("Segoe UI",18,"bold"),
     fg_color="#0f766e",
     hover_color="#115e59",
     command=show_visitor_dashboard
 )
-visitor_btn.pack(pady=12)
+visitor_btn.pack(pady=6, padx=18)
 def show_monthly_report():
     report_window = ctk.CTkToplevel(app)
     report_window.title("Monthly Attendance Report")
@@ -2158,7 +2217,7 @@ def show_monthly_report():
     records = cursor.fetchall()
     for row in records:
         employee_id = row[0]
-        employee_name = row[1]
+        name = row[1]
         present_days = row[2]
         cursor.execute("""
         SELECT working_hours
@@ -2187,7 +2246,7 @@ def show_monthly_report():
         report_box.insert(
             "end",
             f"{employee_id:<10}"
-            f"{employee_name:<15}"
+            f"{name:<15}"
             f"{present_days:<10}"
             f"{total_hours} hrs\n"
         )
@@ -2211,14 +2270,15 @@ def show_about():
 report_btn = ctk.CTkButton(
     sidebar,
     text="📊 Monthly Report",
-    width=220,
+    width=240,
     height=55,
-    font=("Arial", 20),
+    corner_radius=12,
+    font=("Segoe UI",18,"bold"),
     fg_color="#0f766e",
     hover_color="#115e59",
     command=show_monthly_report
 )
-report_btn.pack(pady=12)
+report_btn.pack(pady=6, padx=18)
 def logout():
     app.destroy()
     subprocess.Popen([
@@ -2250,16 +2310,20 @@ dashboard_title.pack(
     pady=30
 )
 def update_clock():
-    current_time = strftime(
-        "%d-%m-%Y  %H:%M:%S"
-    )
-    clock_label.configure(
-        text=current_time
-    )
-    clock_label.after(
-        1000,
-        update_clock
-    )
+    try:
+        current_time = datetime.now().strftime(
+            "%H:%M:%S"
+        )
+        clock_label.configure(
+            text=current_time
+        )
+        if app.winfo_exists():
+            app.after(
+                1000,
+                update_clock
+            )
+    except:
+        pass
 clock_label = ctk.CTkLabel(
     dashboard_page,
     font=("Arial", 20, "bold"),
@@ -2396,17 +2460,36 @@ card3_value.pack()
 employees_title = ctk.CTkLabel(
     employees_page,
     text="Employee Management",
-    font=("Segoe UI", 42, "bold")
+    font=("Segoe UI",42,"bold")
 )
-employees_title.pack(pady=40)
+employees_title.pack(
+    anchor="w",
+    padx=30,
+    pady=(30,0)
+)
+subtitle = ctk.CTkLabel(
+    employees_page,
+    text="Manage all employee information",
+    font=("Segoe UI",16),
+    text_color="gray"
+)
+subtitle.pack(
+    anchor="w",
+    padx=32,
+    pady=(0,20)
+)
 buttons_frame = ctk.CTkFrame(
     employees_page,
     fg_color="transparent"
 )
-buttons_frame.pack(pady=20)
+buttons_frame.pack(
+    anchor="w",
+    padx=40,
+    pady=(10,20)
+)
 add_btn = ctk.CTkButton(
     buttons_frame,
-    text="Add Employee",
+    text="+ Add Employee",
     width=200,
     height=50,
     font=("Arial", 18),
@@ -2424,14 +2507,14 @@ modify_btn = ctk.CTkButton(
     width=200,
     height=50,
     font=("Arial", 18),
-    command=open_modify_employee
+    command=lambda: None
 )
-modify_btn.grid(
-    row=0,
-    column=1,
-    padx=20,
-    pady=20
-)
+#modify_btn.grid(
+    #row=0,
+    #column=1,
+    #padx=20,
+    #pady=20
+#)
 delete_btn = ctk.CTkButton(
     buttons_frame,
     text="Delete Employee",
@@ -2440,14 +2523,14 @@ delete_btn = ctk.CTkButton(
     font=("Arial", 18),
     fg_color="red",
     hover_color="darkred",
-    command=admin_delete_login
+    command=lambda: None
 )
-delete_btn.grid(
-    row=0,
-    column=2,
-    padx=20,
-    pady=20
-)
+#delete_btn.grid(
+    #row=0,
+    #column=2,
+    #padx=20,
+    #pady=20
+#)
 change_photo_btn = ctk.CTkButton(
     buttons_frame,
     text="Change Photo",
@@ -2458,65 +2541,119 @@ change_photo_btn = ctk.CTkButton(
     hover_color="#7e22ce",
     command=open_change_photo
 )
-change_photo_btn.grid(
-    row=0,
-    column=3,
-    padx=20,
-    pady=20
-)
-employee_table = ctk.CTkTextbox(
-    employees_page,
-    width=1000,
-    height=400,
-    font=("Consolas", 18)
-)
-employee_table.pack(pady=30)
+#change_photo_btn.grid(
+    #row=0,
+    #column=3,
+    #padx=20,
+    #pady=20
+#)
 def search_employee_data():
-    keyword = search_entry.get()
-    employee_table.configure(state="normal")
-    employee_table.delete("1.0", "end")
-    employee_table.insert(
-        "end",
-        "Search Results\n\n"
-    )
-    employee_table.insert(
-        "end",
-        "ID       Name            Department\n"
-    )
-    employee_table.insert(
-        "end",
-        "--------------------------------------\n"
-    )
+    keyword = search_entry.get().strip()
+    for widget in table_container.winfo_children():
+        widget.destroy()
+    headers = [
+        "ID",
+        "Name",
+        "Department",
+        "Email",
+        "Operations"
+    ]
+    for col, header in enumerate(headers):
+        ctk.CTkLabel(
+            table_container,
+            text=header,
+            font=("Segoe UI",18,"bold")
+        ).grid(
+            row=0,
+            column=col,
+            padx=25,
+            pady=15,
+            sticky="w"
+        )
     conn = sqlite3.connect(
         "database/chronosface.db"
     )
     cursor = conn.cursor()
     cursor.execute("""
-    SELECT employee_id, employee_name, department
+    SELECT
+        employee_id,
+        employee_name,
+        department,
+        email
     FROM biometric_data
     WHERE employee_id LIKE ?
-    OR employee_name LIKE ?
-    """, (
+       OR employee_name LIKE ?
+       OR department LIKE ?
+    ORDER BY employee_id
+    """,
+    (
+        f"%{keyword}%",
         f"%{keyword}%",
         f"%{keyword}%"
     ))
     employees = cursor.fetchall()
     conn.close()
-    for emp in employees:
-        employee_table.insert(
-            "end",
-            f"{emp[0]:<10}{emp[1]:<18}{emp[2]}\n"
+    for row, emp in enumerate(
+        employees,
+        start=1
+    ):
+        ctk.CTkLabel(
+            table_container,
+            text=emp[0]
+        ).grid(row=row,column=0,padx=20,pady=10)
+        ctk.CTkLabel(
+            table_container,
+            text=emp[1]
+        ).grid(row=row,column=1,padx=20,pady=10)
+        ctk.CTkLabel(
+            table_container,
+            text=emp[2]
+        ).grid(row=row,column=2,padx=20,pady=10)
+        ctk.CTkLabel(
+            table_container,
+            text=emp[3]
+        ).grid(row=row,column=3,padx=20,pady=10)
+        edit_btn = ctk.CTkButton(
+            table_container,
+            text="✏",
+            width=45,
+            height=40,
+            corner_radius=8,
+            fg_color="#2563eb",
+            command=lambda emp_id=emp[0]: open_modify_employee(emp_id)
         )
-    employee_table.configure(state="disabled")
+        edit_btn.grid(
+            row=row,
+            column=4,
+            padx=5
+        )
+        delete_btn = ctk.CTkButton(
+            table_container,
+            text="🗑",
+            width=45,
+            height=40,
+            corner_radius=8,
+            fg_color="#dc2626",
+            command=lambda emp_id=emp[0]: admin_delete_login(emp_id)
+        )
+        delete_btn.grid(
+            row=row,
+            column=5,
+            padx=5
+        )
 search_frame = ctk.CTkFrame(
     employees_page,
     fg_color="transparent"
 )
-search_frame.pack(pady=10)
+search_frame.pack(
+    anchor="e",
+    padx=50,
+    pady=20
+)
 search_entry = ctk.CTkEntry(
     search_frame,
-    width=350,
-    height=45,
+    width=450,
+    height=50,
     placeholder_text="Search Employee ID or Name"
 )
 search_entry.grid(
@@ -2536,6 +2673,17 @@ search_btn.grid(
     row=0,
     column=1,
     padx=10
+)
+table_container = ctk.CTkScrollableFrame(
+    employees_page,
+    fg_color="#0f172a",
+    corner_radius=20
+)
+table_container.pack(
+    fill="both",
+    expand=True,
+    padx=20,
+    pady=20
 )
 attendance_box = ctk.CTkTextbox(
     attendance_page,
@@ -2609,7 +2757,7 @@ def show_work_hours_chart():
     """)
     records = cursor.fetchall()
     conn.close()
-    employee_names = []
+    names = []
     work_hours = []
     for row in records:
         name = row[0]
@@ -2619,11 +2767,11 @@ def show_work_hours_chart():
             total_hours = h + (m / 60)
         except:
             total_hours = 0
-        employee_names.append(name)
+        names.append(name)
         work_hours.append(total_hours)
     plt.figure(figsize=(9,5))
     bars = plt.bar(
-        employee_names,
+        name,
         work_hours,
         color=[
             "#2563eb",
@@ -2803,7 +2951,7 @@ employee_options = [
 employee_dropdown = ctk.CTkComboBox(
     payroll_page,
     values=employee_options,
-    width=350,
+    width=450,
     height=50,
     font=("Arial", 18),
     corner_radius=12
@@ -2826,22 +2974,21 @@ def create_payslip():
     cursor.execute("""
     SELECT
         employee_id,
-        employee_name,
-        department,
-        salary
-        FROM biometric_data
-        WHERE employee_id = ?
-        """, (employee_id,))
+        name,
+        department
+    FROM biometric_data
+    WHERE employee_id = ?
+    """, (employee_id,))
     employee =  cursor.fetchone()
     conn.close()
     if employee:
         employee_id = employee[0]
-        employee_name = employee[1]
+        name = employee[1]
         department = employee[2]
-        salary = employee[3]
+        salary = 50000
         file_path = generate_payslip(
             employee_id,
-            employee_name,
+            name,
             department,
             salary
         )
@@ -3118,7 +3265,7 @@ def load_reports():
         "--------------------------------------\n"
     )
     cursor.execute("""
-    SELECT employee_id, employee_name, working_hours
+    SELECT employee_id, name, working_hours
     FROM attendance
     """)
     records = cursor.fetchall()
@@ -3200,7 +3347,7 @@ def load_leave_requests():
     SELECT
     id,
     employee_id,
-    employee_name,
+    name,
     leave_date,
     status
     FROM leaves
@@ -3210,8 +3357,16 @@ def load_leave_requests():
     for row in records:
         leave_box.insert(
             "end",
-            f"{row[0]:<6}{row[1]:<10}{row[2]:<15}{row[3]:<15}{row[4]}"
+            f"{row[0]:<5}"
+            f"{row[1]:<12}"
+            f"{row[2]:<20}"
+            f"{row[3]:<15}"
+            f"{row[4]:<12}\n"
         )
+        leave_box.insert(
+        "end",
+        "-" * 70 + "\n"
+    )
     leave_box.configure(state="disabled")
 load_leave_requests()
 def update_leave_status(status):
@@ -3230,7 +3385,7 @@ def update_leave_status(status):
     cursor.execute("""
     SELECT
         employee_id,
-        employee_name
+        name
     FROM leaves
     WHERE id=?
     """,
@@ -3244,7 +3399,7 @@ def update_leave_status(status):
         conn.close()
         return
     employee_id = leave_data[0]
-    employee_name = leave_data[1]
+    name = leave_data[1]
     cursor.execute("""
     UPDATE leaves
     SET status=?
@@ -3256,7 +3411,7 @@ def update_leave_status(status):
     ))
     print(
         "ADDING LOG:",
-        employee_name,
+        name,
         status
     )
     cursor.execute("""
@@ -3271,7 +3426,7 @@ def update_leave_status(status):
     """,
     (
         "/leave/status",
-        employee_name,
+        name,
         f"LEAVE_{status.upper()}",
         datetime.now().strftime(
             "%Y-%m-%d %H:%M:%S"
@@ -3291,7 +3446,7 @@ def update_leave_status(status):
             employee_email,
             f"Leave {status}",
             f"""
-Hello {employee_name},
+Hello {name},
 Your leave request has been {status}.
 Regards,
 ChronosFace HR Team

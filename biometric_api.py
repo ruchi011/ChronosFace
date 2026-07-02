@@ -44,7 +44,7 @@ def register():
     ))
     cursor.execute("""
     INSERT INTO api_logs
-    (endpoint, employee_name, action, log_time)
+    (endpoint,employee_name, action, log_time)
     VALUES (?, ?, ?, ?)
     """,
     (
@@ -64,9 +64,9 @@ def register():
 def verify():
 
     data = request.json
-    employee_name = data["employeeName"]
+    name = data["employeeName"]
 
-    if employee_name not in employee_embeddings:
+    if name not in employee_embeddings:
         return jsonify({
             "status": "employee_not_found"
         }), 404
@@ -81,7 +81,7 @@ def verify():
     """,
     (
         "/api/biometric/verify",
-        employee_name,
+        name,
         "VERIFY",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ))
@@ -91,7 +91,7 @@ def verify():
 
     return jsonify({
         "status": "verified",
-        "employeeName": employee_name
+        "employeeName": name
     })
 @app.route("/api/biometric/all", methods=["GET"])
 def get_all():
@@ -106,16 +106,16 @@ def get_all():
     ]
     conn.close()
     return jsonify(employees)
-@app.route("/api/biometric/get_embedding/<employee_name>", methods=["GET"])
-def get_embedding(employee_name):
-    if employee_name not in employee_embeddings:
+@app.route("/api/biometric/get_embedding/<name>", methods=["GET"])
+def get_embedding(name):
+    if name not in employee_embeddings:
         return jsonify({
             "message":"not found"
         }), 404
     return jsonify({
-        "employeeName": employee_name,
+        "employeeName": name,
         "faceEmbedding":
-            employee_embeddings[employee_name].tolist()
+            employee_embeddings[name].tolist()
     })
 @app.route("/api/logs", methods=["GET"])
 def logs():
@@ -156,7 +156,7 @@ def get_employees():
     for emp in employees:
         data.append({
             "employee_id": emp[0],
-            "employee_name": emp[1],
+            "name": emp[1],
             "department": emp[2]
         })
 
@@ -198,7 +198,7 @@ def start_break_api():
     """,
     (
         "/api/attendance/startbreak",
-        data["employeeId"],
+        data["employeeName"],
         "START_BREAK",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ))
@@ -245,14 +245,12 @@ def end_break_api():
     """,
     (
         "/api/attendance/endbreak",
-        data["employeeId"],
+        data["employeeName"],
         "END_BREAK",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ))
-
     conn.commit()
     conn.close()
-
     return jsonify({"status":"success"})
 @app.route("/api/attendance/clockin", methods=["POST"])
 def clock_in_api():
@@ -285,7 +283,7 @@ def clock_in_api():
     INSERT INTO attendance
     (
         employee_id,
-        name,
+        employee_name,
         date,
         clock_in
     )
@@ -408,7 +406,7 @@ def apply_leave():
     INSERT INTO leave_requests
     (
         employee_id,
-        name,
+        employee_name,
         leave_date,
         reason,
         status

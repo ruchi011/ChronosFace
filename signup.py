@@ -71,7 +71,7 @@ employee_id_entry = ctk.CTkEntry(
     placeholder_text="Employee ID",
     font=("Arial", 16)
 )
-employee_id_entry.pack(pady=12)
+employee_id_entry.pack(pady=6)
 name_entry = ctk.CTkEntry(
     app,
     width=380,
@@ -79,7 +79,7 @@ name_entry = ctk.CTkEntry(
     placeholder_text="Full Name",
     font=("Arial", 16)
 )
-name_entry.pack(pady=12)
+name_entry.pack(pady=6)
 department_menu = ctk.CTkOptionMenu(
     app,
     values=load_departments(),
@@ -87,7 +87,7 @@ department_menu = ctk.CTkOptionMenu(
     height=55,
     font=("Arial", 16)
 )
-department_menu.pack(pady=12)
+department_menu.pack(pady=6)
 new_department_entry = ctk.CTkEntry(
     app,
     width=380,
@@ -95,7 +95,7 @@ new_department_entry = ctk.CTkEntry(
     placeholder_text="Add New Department",
     font=("Arial", 16)
 )
-new_department_entry.pack(pady=12)
+new_department_entry.pack(pady=6)
 def add_department():
     department_name = (
         new_department_entry.get().strip()
@@ -156,7 +156,7 @@ email_entry = ctk.CTkEntry(
     placeholder_text="Email",
     font=("Arial", 16)
 )
-email_entry.pack(pady=12)
+email_entry.pack(pady=6)
 password_entry = ctk.CTkEntry(
     app,
     width=380,
@@ -165,7 +165,7 @@ password_entry = ctk.CTkEntry(
     show="*",
     font=("Arial", 16)
 )
-password_entry.pack(pady=12)
+password_entry.pack(pady=6)
 confirm_password_entry = ctk.CTkEntry(
     app,
     width=380,
@@ -174,7 +174,7 @@ confirm_password_entry = ctk.CTkEntry(
     show="*",
     font=("Arial", 16)
 )
-confirm_password_entry.pack(pady=12)
+confirm_password_entry.pack(pady=6)
 def signup():
     employee_id = (
         employee_id_entry.get().strip()

@@ -3,8 +3,8 @@ import os
 import time
 from flask import app
 from insightface.app import FaceAnalysis
-def capture_employee_dataset(employee_name):
-    dataset_path = f"dataset/{employee_name}"
+def capture_employee_dataset(name):
+    dataset_path = f"dataset/{name}"
     os.makedirs(dataset_path, exist_ok=True)
     app = FaceAnalysis(name="buffalo_l")
     app.prepare(ctx_id=0)
@@ -17,7 +17,7 @@ def capture_employee_dataset(employee_name):
             break
         cv2.putText(
             frame,
-            f"Images Captured: {count}/5",
+            f"Images Captured: {count}/10",
             (20, 40),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
@@ -55,24 +55,9 @@ def capture_employee_dataset(employee_name):
 
             if current_time - last_capture_time >= 1:
 
-                face_crop = frame[
-                    y1:y2,
-                    x1:x2
-                ]
-
-                face_crop = cv2.resize(
-                    face_crop,
-                    (224, 224)
-                )
-
-                image_path = (
-                    f"{dataset_path}/"
-                    f"{employee_name}_{count}.jpg"
-                )
-
                 cv2.imwrite(
-                    image_path,
-                    face_crop
+                    f"{dataset_path}/{count}.jpg",
+                    frame
                 )
 
                 print(
@@ -86,17 +71,17 @@ def capture_employee_dataset(employee_name):
             "Capture Dataset",
             frame
         )
-        if count >= 5:
+        if count >= 10:
             break
         if cv2.waitKey(1) == 27:
             break
     cap.release()
     cv2.destroyAllWindows()
-    print(f"Dataset captured for {employee_name}")
+    print(f"Dataset captured for {name}")
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:
-        employee_name = sys.argv[1]
+        name = sys.argv[1]
     else:
-        employee_name = input("Enter Employee Name: ")
-    capture_employee_dataset(employee_name)
+        name = input("Enter Employee Name: ")
+    capture_employee_dataset(name)
