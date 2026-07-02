@@ -27,7 +27,11 @@ app.configure(fg_color="#0f172a")
 try:
     with open("current_employee.txt", "r") as file:
         employee_id = file.read().strip()
-except:
+except Exception as e:
+    messagebox.showerror(
+        "Error",
+        str(e)
+    )
     employee_id = "Unknown"
 main_frame = ctk.CTkScrollableFrame(
     app,
@@ -90,7 +94,7 @@ conn = sqlite3.connect(
 )
 cursor = conn.cursor()
 cursor.execute("""
-SELECT name, department, email
+SELECT employee_name, department, email
 FROM biometric_data
 WHERE employee_id = ?
 """, (employee_id,))

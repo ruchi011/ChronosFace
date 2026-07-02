@@ -5,7 +5,6 @@ import subprocess
 import sys
 from tkinter import messagebox, ttk
 import os
-import shutil
 import csv
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -34,51 +33,6 @@ conn = sqlite3.connect(
     "database/chronosface.db"
 )
 cursor = conn.cursor()
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS leaves (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id TEXT,
-    name TEXT,
-    leave_date TEXT,
-    reason TEXT,
-    status TEXT
-)
-""")
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS visitors (
-    visitor_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    phone TEXT,
-    email TEXT,
-    company TEXT,
-    purpose TEXT,
-    host_employee TEXT,
-    visit_date TEXT,
-    checkin_time TEXT,
-    checkout_time TEXT,
-    status TEXT,
-    photo_path TEXT
-)
-""")
-cursor.execute("""
-            CREATE TABLE IF NOT EXISTS visitor_whitelist (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                visitor_name TEXT,
-                phone TEXT,
-                company TEXT
-            )
-            """)
-cursor.execute("""
-            CREATE TABLE IF NOT EXISTS visitor_blacklist (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                visitor_name TEXT,
-                phone TEXT,
-                reason TEXT
-            )
-            """)
-conn.commit()
-conn.commit()
-conn.close()
 sidebar = ctk.CTkFrame( 
     app,
     width=200,
@@ -906,7 +860,11 @@ def auto_refresh_logs():
         load_logs()
         if app.winfo_exists():
             app.after(5000, auto_refresh_logs)
-    except:
+    except Exception as e:
+        messagebox.showerror(
+            "Error",
+            str(e)
+        )
         pass
 auto_refresh_logs()
 leave_btn = ctk.CTkButton(
@@ -1207,7 +1165,11 @@ def show_visitor_dashboard():
                             pady=10
                         )
 
-                    except:
+                    except Exception as e:
+                        messagebox.showerror(
+                            "Error",
+                            str(e)
+                        )
                         photo_label = ctk.CTkLabel(
                             table_container,
                             text="No Photo"
@@ -1552,7 +1514,11 @@ def show_visitor_dashboard():
                             face,
                             (200, 200)
                         )
-                    except:
+                    except Exception as e:
+                        messagebox.showerror(
+                            "Error",
+                            str(e)
+                        )
                         continue
                     best_match = None
                     best_score = 999999
@@ -1580,7 +1546,7 @@ def show_visitor_dashboard():
                             SET
                                 status = 'Checked-In',
                                 checkin_time = ?
-                            WHERE employee_name = ?
+                            WHERE name = ?
                         """, (current_time, visitor_name))
                         cursor.execute("""
                         INSERT INTO api_logs
@@ -2237,8 +2203,11 @@ def show_monthly_report():
                     m * 60 +
                     s
                 )
-            except:
-                pass
+            except Exception as e:
+                messagebox.showerror(
+                    "Error",
+                    str(e)
+                )
         total_hours = round(
             total_seconds / 3600,
             2
@@ -2322,8 +2291,11 @@ def update_clock():
                 1000,
                 update_clock
             )
-    except:
-        pass
+    except Exception as e:
+        messagebox.showerror(
+            "Error",
+            str(e)
+        )
 clock_label = ctk.CTkLabel(
     dashboard_page,
     font=("Arial", 20, "bold"),
@@ -2765,7 +2737,11 @@ def show_work_hours_chart():
         try:
             h, m, s = map(int, time_value.split(":"))
             total_hours = h + (m / 60)
-        except:
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                str(e)
+            )
             total_hours = 0
         names.append(name)
         work_hours.append(total_hours)
@@ -2974,7 +2950,7 @@ def create_payslip():
     cursor.execute("""
     SELECT
         employee_id,
-        name,
+        employee_name,
         department
     FROM biometric_data
     WHERE employee_id = ?
@@ -3468,7 +3444,8 @@ try:
     print("Leaves Loaded")
 except Exception as e:
     print("Leaves Error:", e)
-show_page(dashboard_page)
-load_employee_table()
 auto_refresh_employee_table()
-app.mainloop()
+if __name__ == "__main__":
+    show_page(dashboard_page)
+    load_employee_table()
+    app.mainloop()

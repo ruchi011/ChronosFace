@@ -1,10 +1,7 @@
 import customtkinter as ctk
 import subprocess
 import sys
-import requests
 from tkinter import messagebox
-from admin_dashboard import load_employee_table
-from admin_dashboard import load_employee_table
 from attendance_export import export_attendance
 from profile_window import open_profile
 from change_password import open_change_password
@@ -13,35 +10,55 @@ import sqlite3
 from datetime import datetime
 import matplotlib.pyplot as plt
 def load_hr_employees():
-    employees_box.delete("1.0", "end")
-    employees_box.insert(
-        "end",
-        "Employee Details\n\n"
+    employees_box.delete("1.0","end")
+    keyword = search_employee.get().strip()
+    conn = sqlite3.connect(
+        "database/chronosface.db"
     )
-    try:
-        response = requests.get(
-            "http://127.0.0.1:5000/api/employees"
-        )
-        employees = response.json()
-        for emp in employees:
-            employees_box.insert(
-                "end",
-                f"{emp['employee_id']}    "
-                f"{emp['name']}    "
-                f"{emp['department']}\n"
-            )
-    except Exception as e:
+    cursor = conn.cursor()
+    if keyword == "":
+        cursor.execute("""
+        SELECT
+            employee_id,
+            employee_name,
+            department,
+            email,
+            phone
+        FROM biometric_data
+        ORDER BY employee_name
+        """)
+    else:
+        cursor.execute("""
+        SELECT
+            employee_id,
+            employee_name,
+            department,
+            email,
+            phone
+        FROM biometric_data
+        WHERE
+            employee_name LIKE ?
+            OR employee_id LIKE ?
+            OR department LIKE ?
+        ORDER BY employee_name
+        """,
+        (
+            f"%{keyword}%",
+            f"%{keyword}%",
+            f"%{keyword}%"
+        ))
+    employees = cursor.fetchall()
+    conn.close()
+    for emp in employees:
         employees_box.insert(
             "end",
-            f"Error: {e}"
+            f"ID : {emp[0]}\n"
+            f"Name : {emp[1]}\n"
+            f"Department : {emp[2]}\n"
+            f"Email : {emp[3]}\n"
+            f"Phone : {emp[4]}\n"
+            "--------------------------------------\n"
         )
-def auto_refresh_hr():
-    try:
-        load_hr_employees()
-        if app.winfo_exists():
-            app.after(3000, auto_refresh_hr)
-    except:
-        pass
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 app = ctk.CTk()
@@ -193,17 +210,13 @@ logout_btn.pack(
     pady=30
 )
 def menu_action(choice):
-    if choice == "Switch to Employee":
+    if choice == "Profile":
+        open_profile("hr")
+    elif choice == "Switch to Employee":
         app.destroy()
         subprocess.Popen([
             sys.executable,
             "employee_login.py"
-        ])
-    elif choice == "Switch to Admin":
-        app.destroy()
-        subprocess.Popen([
-            sys.executable,
-            "admin_login.py"
         ])
     elif choice == "Change Password":
         open_change_password("hr")
@@ -214,11 +227,10 @@ def menu_action(choice):
             "login.py"
         ])
 profile_menu = ctk.CTkOptionMenu(
-    main_frame,
+    dashboard_page,
     values=[
         "Profile",
         "Switch to Employee",
-        "Switch to Admin",
         "Change Password",
         "Logout"
     ],
@@ -228,8 +240,9 @@ profile_menu = ctk.CTkOptionMenu(
     font=("Arial", 16)
 )
 profile_menu.place(
-    x=1150,
-    y=20
+    relx=0.98,
+    y=20,
+    anchor="ne"
 )
 dashboard_title = ctk.CTkLabel(
     dashboard_page,
@@ -362,7 +375,7 @@ employees_box = ctk.CTkTextbox(
 employees_box.pack(pady=20)
 search_employee.bind(
     "<KeyRelease>",
-    lambda e: load_employee_table()
+    lambda e: load_hr_employees()
 )
 load_hr_employees()
 attendance_title = ctk.CTkLabel(
@@ -376,23 +389,6 @@ attendance_search = ctk.CTkEntry(
     placeholder_text="Search Employee"
 )
 attendance_search.pack(pady=10)
-keyword = attendance_search.get()
-conn = sqlite3.connect(
-    "database/chronosface.db"
-)
-cursor = conn.cursor()
-cursor.execute("""
-SELECT
-employee_id,
-name
-FROM attendance
-WHERE date=?
-AND name LIKE ?
-""",
-(
-today,
-f"%{keyword}%"
-))
 attendance_box = ctk.CTkTextbox(
     attendance_page,
     width=900,
@@ -445,7 +441,6 @@ def load_attendance_data():
             f"{row[1]}    "
             f"Present\n"
         )
-
     conn.close()
 load_attendance_data()
 def show_attendance_graph():
@@ -542,7 +537,7 @@ def load_reports():
     cursor.execute("""
     SELECT
     employee_id,
-    name
+    employee_name
     FROM biometric_data
     """)
 
@@ -814,7 +809,7 @@ def create_payslip():
     cursor = conn.cursor()
     cursor.execute("""
     SELECT
-        name,
+        employee_name,
         department
     FROM biometric_data
     WHERE employee_id=?
@@ -928,18 +923,22 @@ password_btn = ctk.CTkButton(
     command=lambda: open_change_password("hr")
 )
 password_btn.pack(pady=20)
+def auto_refresh_hr():
+    load_hr_employees()
+    load_attendance_data()
+    load_reports()
+    load_pending_leaves()
+    global refresh_id
+    refresh_id = app.after(
+        3000,
+        auto_refresh_hr
+    )
 show_page(dashboard_page)
-refresh_id = app.after(
-    3000,
-    auto_refresh_hr
-)
 def on_closing():
+    global refresh_id
     try:
-        app.destroy()
+        app.after_cancel(refresh_id)
     except:
         pass
-app.protocol(
-    "WM_DELETE_WINDOW",
-    on_closing
-)
+    app.destroy()
 app.mainloop()

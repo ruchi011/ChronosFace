@@ -83,7 +83,7 @@ login_btn = ctk.CTkButton(
     app,
     text="Login",
     width=300,
-    height=55,
+    height=45,
     font=("Arial", 22),
     fg_color="#2563eb",
     hover_color="#1d4ed8",

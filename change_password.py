@@ -78,24 +78,22 @@ def open_change_password(employee_id):
         cursor = conn.cursor()
         if employee_id == "admin":
             cursor.execute("""
-            SELECT password
-            FROM admins
-            WHERE username = ?
-            """, ("admin",))
+            SELECT admin_password
+            FROM settings
+            WHERE id=1
+            """)
             current_password = cursor.fetchone()
             if (
                 current_password and
                 current_password[0] == old_password
             ):
                 cursor.execute("""
-                UPDATE admins
-                SET password = ?
-                WHERE username = ?
+                UPDATE settings
+                SET admin_password=?
+                WHERE id=1
                 """,
-                (
-                    new_password,
-                    "admin"
-                ))
+                (new_password,)
+                )
                 conn.commit()
                 messagebox.showinfo(
                     "Success",
@@ -107,26 +105,30 @@ def open_change_password(employee_id):
                     "Error",
                     "Old Password Incorrect"
                 )
+                conn.commit()
+                messagebox.showinfo(
+                    "Success",
+                    "Admin Password Changed Successfully"
+                )
+                window.destroy()
         elif employee_id == "hr":
             cursor.execute("""
-            SELECT password
-            FROM hr
-            WHERE username = ?
-            """, ("hr",))
+            SELECT hr_password
+            FROM settings
+            WHERE id=1
+            """)
             current_password = cursor.fetchone()
             if (
                 current_password and
                 current_password[0] == old_password
             ):
                 cursor.execute("""
-                UPDATE hr
-                SET password = ?
-                WHERE username = ?
+                UPDATE settings
+                SET hr_password=?
+                WHERE id=1
                 """,
-                (
-                    new_password,
-                    "hr"
-                ))
+                (new_password,)
+                )
                 conn.commit()
                 messagebox.showinfo(
                     "Success",
@@ -138,6 +140,12 @@ def open_change_password(employee_id):
                     "Error",
                     "Old Password Incorrect"
                 )
+                conn.commit()
+                messagebox.showinfo(
+                    "Success",
+                    "HR Password Changed Successfully"
+                )
+                window.destroy()
         else:
             cursor.execute("""
             SELECT password

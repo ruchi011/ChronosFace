@@ -2,30 +2,36 @@ import customtkinter as ctk
 import subprocess
 import sys
 from PIL import Image
+
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
+
 app = ctk.CTk()
 app.title("ChronosFace Login")
 app.geometry("700x750")
 app.configure(fg_color="#0f172a")
 app.resizable(False, False)
+
 logo_image = ctk.CTkImage(
     light_image=Image.open("assets/logo.png"),
     dark_image=Image.open("assets/logo.png"),
     size=(120, 120)
 )
+
 logo_label = ctk.CTkLabel(
     app,
     image=logo_image,
     text=""
 )
 logo_label.pack(pady=(40, 10))
+
 title = ctk.CTkLabel(
     app,
     text="ChronosFace AI",
     font=("Segoe UI", 48, "bold")
 )
 title.pack(pady=20)
+
 subtitle = ctk.CTkLabel(
     app,
     text="Smart Face Recognition Attendance System",
@@ -33,24 +39,40 @@ subtitle = ctk.CTkLabel(
     text_color="#94a3b8"
 )
 subtitle.pack(pady=5)
+
+
 def open_admin():
     app.destroy()
     subprocess.Popen([
         sys.executable,
         "admin_login.py"
     ])
+
+
 def open_hr():
     app.destroy()
-    subprocess.run([
+    subprocess.Popen([
         sys.executable,
-        "hr_dashboard.py"
+        "hr_login.py"
     ])
+
+
 def open_employee():
     app.destroy()
-    subprocess.run([
+    subprocess.Popen([
         sys.executable,
         "employee_login.py"
     ])
+
+
+def open_signup():
+    app.destroy()
+    subprocess.Popen([
+        sys.executable,
+        "signup.py"
+    ])
+
+
 admin_btn = ctk.CTkButton(
     app,
     text="🛡 Admin",
@@ -62,6 +84,7 @@ admin_btn = ctk.CTkButton(
     command=open_admin
 )
 admin_btn.pack(pady=20)
+
 hr_btn = ctk.CTkButton(
     app,
     text="👥 HR",
@@ -74,6 +97,7 @@ hr_btn = ctk.CTkButton(
     command=open_hr
 )
 hr_btn.pack(pady=20)
+
 employee_btn = ctk.CTkButton(
     app,
     text="🧑 Employee",
@@ -85,6 +109,7 @@ employee_btn = ctk.CTkButton(
     command=open_employee
 )
 employee_btn.pack(pady=20)
+
 signup_btn = ctk.CTkButton(
     app,
     text="📝 Signup",
@@ -94,13 +119,8 @@ signup_btn = ctk.CTkButton(
     fg_color="#7c3aed",
     hover_color="#6d28d9",
     corner_radius=18,
-    command=lambda: [
-        app.destroy(),
-        subprocess.Popen([
-            sys.executable,
-            "signup.py"
-        ])
-    ]
+    command=open_signup
 )
 signup_btn.pack(pady=20)
+
 app.mainloop()

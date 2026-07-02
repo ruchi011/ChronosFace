@@ -117,6 +117,48 @@ CREATE TABLE IF NOT EXISTS strangers(
     time TEXT
 )
 """)
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS leaves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id TEXT,
+    name TEXT,
+    leave_date TEXT,
+    reason TEXT,
+    status TEXT
+)
+""")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS visitors (
+    visitor_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    phone TEXT,
+    email TEXT,
+    company TEXT,
+    purpose TEXT,
+    host_employee TEXT,
+    visit_date TEXT,
+    checkin_time TEXT,
+    checkout_time TEXT,
+    status TEXT,
+    photo_path TEXT
+)
+""")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS visitor_whitelist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visitor_name TEXT,
+    phone TEXT,
+    company TEXT
+)
+""")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS visitor_blacklist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visitor_name TEXT,
+    phone TEXT,
+    reason TEXT
+)
+ """)
 conn.commit()
 conn.close()
 print("Database Created Successfully")
